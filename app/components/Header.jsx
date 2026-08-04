@@ -10,8 +10,16 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
   const {shop, menu} = header;
   return (
     <header className="header">
-      <NavLink prefetch="intent" to="/" style={activeLinkStyle} end>
-        <strong>{shop.name}</strong>
+      <NavLink prefetch="intent" to="/" style={activeLinkStyle} end className="header-logo-link">
+        {shop.brand?.logo?.image?.url ? (
+          <img
+            src={shop.brand.logo.image.url}
+            alt={shop.name}
+            className="header-logo"
+          />
+        ) : (
+          <strong>{shop.name}</strong>
+        )}
       </NavLink>
       <HeaderMenu
         menu={menu}
@@ -57,26 +65,114 @@ export function HeaderMenu({
       {(menu || FALLBACK_HEADER_MENU).items.map((item) => {
         if (!item.url) return null;
 
-        // if the url is internal, we strip the domain
+        // strip the domain if the url is internal
         const url =
           item.url.includes('myshopify.com') ||
           item.url.includes(publicStoreDomain) ||
           item.url.includes(primaryDomainUrl)
             ? new URL(item.url).pathname
             : item.url;
-        return (
-          <NavLink
-            className="header-menu-item"
-            end
-            key={item.id}
-            onClick={close}
-            prefetch="intent"
-            style={activeLinkStyle}
-            to={url}
-          >
-            {item.title}
-          </NavLink>
-        );
+
+        const hasSubmenu = item.items && item.items.length > 0;
+
+        if (viewport === 'desktop') {
+          if (hasSubmenu) {
+            return (
+              <div key={item.id} className="menu-item-has-submenu">
+                <NavLink
+                  className="header-menu-item"
+                  end
+                  prefetch="intent"
+                  style={activeLinkStyle}
+                  to={url}
+                >
+                  {item.title} ▾
+                </NavLink>
+                <div className="dropdown-menu">
+                  {item.items.map((subItem) => {
+                    const subUrl =
+                      subItem.url.includes('myshopify.com') ||
+                      subItem.url.includes(publicStoreDomain) ||
+                      subItem.url.includes(primaryDomainUrl)
+                        ? new URL(subItem.url).pathname
+                        : subItem.url;
+                    return (
+                      <NavLink
+                        key={subItem.id}
+                        className="dropdown-item"
+                        prefetch="intent"
+                        onClick={close}
+                        to={subUrl}
+                      >
+                        {subItem.title}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <NavLink
+              className="header-menu-item"
+              end
+              key={item.id}
+              prefetch="intent"
+              style={activeLinkStyle}
+              to={url}
+            >
+              {item.title}
+            </NavLink>
+          );
+        } else {
+          // Mobile submenu rendering
+          return (
+            <div key={item.id} className="mobile-menu-item-group" style={{ marginBottom: '0.75rem' }}>
+              <NavLink
+                className="header-menu-item"
+                end
+                onClick={close}
+                prefetch="intent"
+                style={activeLinkStyle}
+                to={url}
+              >
+                {item.title}
+              </NavLink>
+              {hasSubmenu && (
+                <div className="mobile-menu-submenu">
+                  {item.items.map((subItem) => {
+                    const subUrl =
+                      subItem.url.includes('myshopify.com') ||
+                      subItem.url.includes(publicStoreDomain) ||
+                      subItem.url.includes(primaryDomainUrl)
+                        ? new URL(subItem.url).pathname
+                        : subItem.url;
+                    return (
+                      <NavLink
+                        key={subItem.id}
+                        className="header-menu-item mobile-sub-link"
+                        end
+                        onClick={close}
+                        prefetch="intent"
+                        to={subUrl}
+                        style={({isActive, isPending}) => ({
+                          fontWeight: isActive ? 'bold' : undefined,
+                          color: isPending ? 'grey' : '#6B6661',
+                          fontSize: '0.9rem',
+                          display: 'block',
+                          margin: '0.25rem 0',
+                        })}
+                      >
+                        {subItem.title}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
       })}
     </nav>
   );

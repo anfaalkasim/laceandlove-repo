@@ -3,6 +3,13 @@ import {getPaginationVariables, Image} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 
 /**
+ * @type {Route.MetaFunction}
+ */
+export const meta = () => {
+  return [{title: 'Lace & Love | Browse All Collections'}];
+};
+
+/**
  * @param {Route.LoaderArgs} args
  */
 export async function loader(args) {
@@ -16,30 +23,24 @@ export async function loader(args) {
 }
 
 /**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
+ * Load data necessary for rendering content above the fold.
  */
 async function loadCriticalData({context, request}) {
   const paginationVariables = getPaginationVariables(request, {
-    pageBy: 4,
+    pageBy: 12,
   });
 
   const [{collections}] = await Promise.all([
     context.storefront.query(COLLECTIONS_QUERY, {
       variables: paginationVariables,
     }),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
   return {collections};
 }
 
 /**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
+ * Load data for rendering content below the fold.
  */
 function loadDeferredData({context}) {
   return {};
@@ -50,8 +51,8 @@ export default function Collections() {
   const {collections} = useLoaderData();
 
   return (
-    <div className="collections">
-      <h1>Collections</h1>
+    <div className="collections-container" style={{maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem'}}>
+      <h1 className="homepage-section-title" style={{marginBottom: '3rem'}}>All Collections</h1>
       <PaginatedResourceSection
         connection={collections}
         resourcesClassName="collections-grid"
@@ -75,6 +76,7 @@ export default function Collections() {
  * }}
  */
 function CollectionItem({collection, index}) {
+  const image = collection?.image;
   return (
     <Link
       className="collection-item"
@@ -82,16 +84,21 @@ function CollectionItem({collection, index}) {
       to={`/collections/${collection.handle}`}
       prefetch="intent"
     >
-      {collection?.image && (
+      {image ? (
         <Image
-          alt={collection.image.altText || collection.title}
-          aspectRatio="1/1"
-          data={collection.image}
-          loading={index < 3 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 400px, 100vw"
+          alt={image.altText || collection.title}
+          aspectRatio="4/5"
+          data={image}
+          loading={index < 4 ? 'eager' : undefined}
+          sizes="(min-width: 45em) 33vw, 100vw"
         />
+      ) : (
+        <div style={{ background: 'linear-gradient(135deg, #2A1B54 0%, #120A2B 100%)', height: '100%', width: '100%' }} />
       )}
-      <h5>{collection.title}</h5>
+      <div className="collection-item-overlay">
+        <h3 className="collection-item-title">{collection.title}</h3>
+        <span className="collection-item-link">View Collection &rarr;</span>
+      </div>
     </Link>
   );
 }

@@ -105,9 +105,28 @@ export default function Product() {
 
   const {title, descriptionHtml} = product;
 
+  // Helper to extract a human-readable name from a metafield (handles plain text & metaobject references)
+  const getMetafieldDisplayValue = (metafield) => {
+    if (!metafield) return null;
+    if (metafield.reference?.fields) {
+      const nameField = metafield.reference.fields.find(
+        (f) => f.key === 'name' || f.key === 'title' || f.key === 'label',
+      );
+      if (nameField) return nameField.value;
+      const firstValuedField = metafield.reference.fields.find((f) => f.value);
+      if (firstValuedField) return firstValuedField.value;
+      return metafield.reference.handle;
+    }
+    return metafield.value;
+  };
+
+  const braTypeValue = getMetafieldDisplayValue(product.bra_type);
+  const pantiesTypeValue = getMetafieldDisplayValue(product.panties_type);
+  const hasSpecs = braTypeValue || pantiesTypeValue;
+
   return (
     <div className="product">
-      <ProductImage image={selectedVariant?.image} />
+      <ProductImage selectedImage={selectedVariant?.image} images={product.images?.nodes} />
       <div className="product-main">
         <h1>{title}</h1>
         <ProductPrice
@@ -120,6 +139,27 @@ export default function Product() {
           selectedVariant={selectedVariant}
         />
         <br />
+
+        {/* Specifications/Attributes Table */}
+        {hasSpecs && (
+          <table className="specs-table">
+            <tbody>
+              {braTypeValue && (
+                <tr className="specs-row">
+                  <td className="specs-label">Bra Style</td>
+                  <td className="specs-value">{braTypeValue}</td>
+                </tr>
+              )}
+              {pantiesTypeValue && (
+                <tr className="specs-row">
+                  <td className="specs-label">Panties Style</td>
+                  <td className="specs-value">{pantiesTypeValue}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+
         <br />
         <p>
           <strong>Description</strong>
@@ -220,6 +260,41 @@ const PRODUCT_FRAGMENT = `#graphql
     seo {
       description
       title
+    }
+    images(first: 10) {
+      nodes {
+        id
+        url
+        altText
+        width
+        height
+      }
+    }
+    bra_type: metafield(namespace: "custom", key: "bra_type") {
+      value
+      reference {
+        ... on Metaobject {
+          id
+          handle
+          fields {
+            key
+            value
+          }
+        }
+      }
+    }
+    panties_type: metafield(namespace: "custom", key: "panties_type") {
+      value
+      reference {
+        ... on Metaobject {
+          id
+          handle
+          fields {
+            key
+            value
+          }
+        }
+      }
     }
   }
   ${PRODUCT_VARIANT_FRAGMENT}

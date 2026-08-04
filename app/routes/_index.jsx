@@ -7,7 +7,7 @@ import {ProductItem} from '~/components/ProductItem';
  * @type {Route.MetaFunction}
  */
 export const meta = () => {
-  return [{title: 'Hydrogen | Home'}];
+  return [{title: 'Lace & Love | Premium Lingerie & Innerwear'}];
 };
 
 /**
@@ -24,32 +24,28 @@ export async function loader(args) {
 }
 
 /**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
+ * Load data necessary for rendering content above the fold.
  */
 async function loadCriticalData({context}) {
-  const [{collections}] = await Promise.all([
-    context.storefront.query(FEATURED_COLLECTION_QUERY),
-    // Add other queries here, so that they are loaded in parallel
+  const [collectionsData] = await Promise.all([
+    context.storefront.query(HOMEPAGE_COLLECTIONS_QUERY),
   ]);
 
   return {
-    featuredCollection: collections.nodes[0],
+    heroImage: collectionsData.shop?.brand?.coverImage?.image || null,
+    brasCollection: collectionsData.bras,
+    pantiesCollection: collectionsData.panties,
+    collections: collectionsData.collections?.nodes || [],
   };
 }
 
 /**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
+ * Load data for rendering content below the fold.
  */
 function loadDeferredData({context}) {
   const recommendedProducts = context.storefront
     .query(RECOMMENDED_PRODUCTS_QUERY)
     .catch((error) => {
-      // Log query errors, but don't throw them so the page can still render
       console.error(error);
       return null;
     });
@@ -62,68 +58,124 @@ function loadDeferredData({context}) {
 export default function Homepage() {
   /** @type {LoaderReturnData} */
   const data = useLoaderData();
-  return (
-    <div className="home">
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
-    </div>
-  );
-}
+  const heroImage = data.heroImage;
 
-/**
- * @param {{
- *   collection: FeaturedCollectionFragment;
- * }}
- */
-function FeaturedCollection({collection}) {
-  if (!collection) return null;
-  const image = collection?.image;
+  // Combine specific collections and filter duplicates from the general list
+  const mainCollections = [];
+  if (data.brasCollection) mainCollections.push(data.brasCollection);
+  if (data.pantiesCollection) mainCollections.push(data.pantiesCollection);
+
+  // Add other collections from the general list that aren't bras or panties
+  data.collections.forEach((col) => {
+    if (col.handle !== 'bras' && col.handle !== 'panties') {
+      mainCollections.push(col);
+    }
+  });
+
   return (
-    <Link
-      className="featured-collection"
-      to={`/collections/${collection.handle}`}
-    >
-      {image && (
-        <div className="featured-collection-image">
-          <Image data={image} sizes="100vw" />
+    <div className="home-container">
+      {/* Hero Banner Section (Customizable via Shopify settings > Brand cover image) */}
+      {heroImage ? (
+        <div className="hero-banner-wrapper">
+          <Link to="/collections" className="hero-banner-link-card">
+            <div
+              className="hero-banner-image-only"
+              style={{
+                backgroundImage: `url(${heroImage.url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                aspectRatio: '16 / 7',
+                width: '100%',
+              }}
+            />
+          </Link>
+          <div className="hero-banner-cta-under">
+            <Link className="hero-btn" to="/collections">
+              Explore All Collections
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="hero-banner">
+          <div className="hero-content">
+            <h1>Lace & Love</h1>
+            <p>Discover our range of premium bras, panties, slips, and kids innerwear designed for everyday comfort and elegance.</p>
+            <Link className="hero-btn" to="/collections">
+              Explore All Collections
+            </Link>
+          </div>
         </div>
       )}
-      <h1>{collection.title}</h1>
-    </Link>
-  );
-}
 
-/**
- * @param {{
- *   products: Promise<RecommendedProductsQuery | null>;
- * }}
- */
-function RecommendedProducts({products}) {
-  return (
-    <div className="recommended-products">
-      <h2>Recommended Products</h2>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Await resolve={products}>
-          {(response) => (
-            <div className="recommended-products-grid">
-              {response
-                ? response.products.nodes.map((product) => (
-                    <ProductItem key={product.id} product={product} />
-                  ))
-                : null}
-            </div>
-          )}
-        </Await>
-      </Suspense>
-      <br />
+      {/* Categories Grid Section */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', maxWidth: '1200px', margin: '3rem auto 1.5rem', padding: '0 1rem' }}>
+        <h2 style={{ margin: 0, fontWeight: 300, fontSize: '1.75rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Shop by Category</h2>
+        <Link to="/collections" style={{ textDecoration: 'underline', color: 'var(--color-dark)', fontSize: '0.9rem', fontWeight: 600 }}>
+          View All Categories &rarr;
+        </Link>
+      </div>
+      <div className="category-grid">
+        {mainCollections.map((collection) => {
+          const image = collection.image;
+          return (
+            <Link
+              key={collection.id}
+              className="category-card"
+              to={`/collections/${collection.handle}`}
+            >
+              {image ? (
+                <Image
+                  data={image}
+                  aspectRatio="4/5"
+                  sizes="(min-width: 45em) 33vw, 100vw"
+                  className="category-card-image"
+                />
+              ) : (
+                <div className="category-card-image" style={{ background: 'linear-gradient(135deg, #2A1B54 0%, #120A2B 100%)', height: '100%' }} />
+              )}
+              <div className="category-card-overlay">
+                <h3 className="category-card-title">{collection.title}</h3>
+                <span className="category-card-link">Explore Collection &rarr;</span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Recommended Products Section */}
+      <div className="recommended-products">
+        <h2 className="homepage-section-title">Recommended Products</h2>
+        <Suspense fallback={<div>Loading recommended products...</div>}>
+          <Await resolve={data.recommendedProducts}>
+            {(response) => {
+              const recommendedProductsList =
+                response?.collection?.products?.nodes ||
+                response?.fallbackProducts?.nodes ||
+                [];
+              return (
+                <div className="recommended-products-grid">
+                  {recommendedProductsList.length > 0 ? (
+                    recommendedProductsList.map((product) => (
+                      <ProductItem key={product.id} product={product} />
+                    ))
+                  ) : (
+                    <p>No products found.</p>
+                  )}
+                </div>
+              );
+            }}
+          </Await>
+        </Suspense>
+      </div>
     </div>
   );
 }
 
-const FEATURED_COLLECTION_QUERY = `#graphql
-  fragment FeaturedCollection on Collection {
+const COLLECTION_FRAGMENT = `#graphql
+  fragment HomepageCollection on Collection {
     id
     title
+    handle
     image {
       id
       url
@@ -131,13 +183,35 @@ const FEATURED_COLLECTION_QUERY = `#graphql
       width
       height
     }
-    handle
   }
-  query FeaturedCollection($country: CountryCode, $language: LanguageCode)
+`;
+
+const HOMEPAGE_COLLECTIONS_QUERY = `#graphql
+  ${COLLECTION_FRAGMENT}
+  query HomepageCollections($country: CountryCode, $language: LanguageCode)
     @inContext(country: $country, language: $language) {
-    collections(first: 1, sortKey: UPDATED_AT, reverse: true) {
+    shop {
+      brand {
+        coverImage {
+          image {
+            id
+            url
+            altText
+            width
+            height
+          }
+        }
+      }
+    }
+    bras: collection(handle: "bras") {
+      ...HomepageCollection
+    }
+    panties: collection(handle: "panties") {
+      ...HomepageCollection
+    }
+    collections(first: 10, sortKey: UPDATED_AT, reverse: true) {
       nodes {
-        ...FeaturedCollection
+        ...HomepageCollection
       }
     }
   }
@@ -164,7 +238,14 @@ const RECOMMENDED_PRODUCTS_QUERY = `#graphql
   }
   query RecommendedProducts ($country: CountryCode, $language: LanguageCode)
     @inContext(country: $country, language: $language) {
-    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
+    collection(handle: "recommended-products") {
+      products(first: 8) {
+        nodes {
+          ...RecommendedProduct
+        }
+      }
+    }
+    fallbackProducts: products(first: 4, sortKey: UPDATED_AT, reverse: true) {
       nodes {
         ...RecommendedProduct
       }
@@ -173,6 +254,6 @@ const RECOMMENDED_PRODUCTS_QUERY = `#graphql
 `;
 
 /** @typedef {import('./+types/_index').Route} Route */
-/** @typedef {import('storefrontapi.generated').FeaturedCollectionFragment} FeaturedCollectionFragment */
+/** @typedef {import('storefrontapi.generated').HomepageCollectionFragment} HomepageCollectionFragment */
 /** @typedef {import('storefrontapi.generated').RecommendedProductsQuery} RecommendedProductsQuery */
 /** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
