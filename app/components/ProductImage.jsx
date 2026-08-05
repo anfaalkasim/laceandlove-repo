@@ -32,7 +32,7 @@ export function ProductImage({selectedImage, images = []}) {
       <div className="product-image-main">
         <Image
           alt={currentImage.altText || 'Product Image'}
-          aspectRatio="1/1"
+          aspectRatio="4/5"
           data={currentImage}
           key={currentImage.id}
           sizes="(min-width: 45em) 50vw, 100vw"
@@ -53,7 +53,7 @@ export function ProductImage({selectedImage, images = []}) {
               >
                 <Image
                   data={img}
-                  aspectRatio="1/1"
+                  aspectRatio="4/5"
                   sizes="80px"
                   alt={img.altText || 'Product Thumbnail'}
                 />

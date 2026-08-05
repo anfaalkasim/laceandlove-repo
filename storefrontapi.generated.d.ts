@@ -411,6 +411,22 @@ export type HomepageCollectionsQuery = {
       }>;
     }>;
   };
+  slides: {
+    nodes: Array<
+      Pick<StorefrontAPI.Metaobject, 'id'> & {
+        image?: StorefrontAPI.Maybe<{
+          reference?: StorefrontAPI.Maybe<{
+            image?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Image, 'url' | 'altText' | 'width' | 'height'>
+            >;
+          }>;
+        }>;
+        linkUrl?: StorefrontAPI.Maybe<
+          Pick<StorefrontAPI.MetaobjectField, 'value'>
+        >;
+      }
+    >;
+  };
   bras?: StorefrontAPI.Maybe<
     Pick<StorefrontAPI.Collection, 'id' | 'title' | 'handle'> & {
       image?: StorefrontAPI.Maybe<
@@ -1470,7 +1486,7 @@ interface GeneratedQueryTypes {
     return: StoreRobotsQuery;
     variables: StoreRobotsQueryVariables;
   };
-  '#graphql\n  #graphql\n  fragment HomepageCollection on Collection {\n    id\n    title\n    handle\n    image {\n      id\n      url\n      altText\n      width\n      height\n    }\n  }\n\n  query HomepageCollections($country: CountryCode, $language: LanguageCode)\n    @inContext(country: $country, language: $language) {\n    shop {\n      brand {\n        coverImage {\n          image {\n            id\n            url\n            altText\n            width\n            height\n          }\n        }\n      }\n    }\n    bras: collection(handle: "bras") {\n      ...HomepageCollection\n    }\n    panties: collection(handle: "panties") {\n      ...HomepageCollection\n    }\n    collections(first: 10, sortKey: UPDATED_AT, reverse: true) {\n      nodes {\n        ...HomepageCollection\n      }\n    }\n  }\n': {
+  '#graphql\n  #graphql\n  fragment HomepageCollection on Collection {\n    id\n    title\n    handle\n    image {\n      id\n      url\n      altText\n      width\n      height\n    }\n  }\n\n  query HomepageCollections($country: CountryCode, $language: LanguageCode)\n    @inContext(country: $country, language: $language) {\n    shop {\n      brand {\n        coverImage {\n          image {\n            id\n            url\n            altText\n            width\n            height\n          }\n        }\n      }\n    }\n    slides: metaobjects(type: "home_slide", first: 10) {\n      nodes {\n        id\n        image: field(key: "image") {\n          reference {\n            ... on MediaImage {\n              image {\n                url\n                altText\n                width\n                height\n              }\n            }\n          }\n        }\n        linkUrl: field(key: "link_url") {\n          value\n        }\n      }\n    }\n    bras: collection(handle: "bras") {\n      ...HomepageCollection\n    }\n    panties: collection(handle: "panties") {\n      ...HomepageCollection\n    }\n    collections(first: 10, sortKey: UPDATED_AT, reverse: true) {\n      nodes {\n        ...HomepageCollection\n      }\n    }\n  }\n': {
     return: HomepageCollectionsQuery;
     variables: HomepageCollectionsQueryVariables;
   };

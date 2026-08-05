@@ -112,8 +112,17 @@ export default function Cart() {
   const cart = useLoaderData();
 
   return (
-    <div className="cart">
-      <h1>Cart</h1>
+    <div className="cart-layout-page">
+      <h1 style={{
+        fontFamily: "'Cormorant Garamond', serif",
+        fontSize: '2.75rem',
+        fontWeight: 500,
+        color: 'var(--color-dark)',
+        marginBottom: '2rem',
+        textAlign: 'left'
+      }}>
+        Shopping Bag
+      </h1>
       <CartMain layout="page" cart={cart} />
     </div>
   );

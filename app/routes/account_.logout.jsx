@@ -10,7 +10,24 @@ export async function loader() {
  * @param {Route.ActionArgs}
  */
 export async function action({context}) {
-  return context.customerAccount.logout();
+  context.session.unset('loggedInCustomerId');
+
+  const response = await context.customerAccount.logout();
+
+  const guestCartId = context.session.get('guestCartId');
+  if (guestCartId) {
+    response.headers.append(
+      'Set-Cookie',
+      `cart=${guestCartId}; path=/; Max-Age=31536000; SameSite=Lax`,
+    );
+  } else {
+    response.headers.append(
+      'Set-Cookie',
+      'cart=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0;',
+    );
+  }
+
+  return response;
 }
 
 /** @typedef {import('./+types/account_.logout').Route} Route */

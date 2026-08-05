@@ -42,7 +42,7 @@ async function loadCriticalData({context, request}) {
 /**
  * Load data for rendering content below the fold.
  */
-function loadDeferredData({context}) {
+function loadDeferredData() {
   return {};
 }
 

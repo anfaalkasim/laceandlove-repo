@@ -2,6 +2,7 @@ import {Await, useLoaderData, Link} from 'react-router';
 import {Suspense} from 'react';
 import {Image} from '@shopify/hydrogen';
 import {ProductItem} from '~/components/ProductItem';
+import {PromoSlider} from '~/components/PromoSlider';
 
 /**
  * @type {Route.MetaFunction}
@@ -36,6 +37,7 @@ async function loadCriticalData({context}) {
     brasCollection: collectionsData.bras,
     pantiesCollection: collectionsData.panties,
     collections: collectionsData.collections?.nodes || [],
+    slides: collectionsData.slides?.nodes || [],
   };
 }
 
@@ -59,6 +61,7 @@ export default function Homepage() {
   /** @type {LoaderReturnData} */
   const data = useLoaderData();
   const heroImage = data.heroImage;
+  const slides = data.slides || [];
 
   // Combine specific collections and filter duplicates from the general list
   const mainCollections = [];
@@ -74,8 +77,10 @@ export default function Homepage() {
 
   return (
     <div className="home-container">
-      {/* Hero Banner Section (Customizable via Shopify settings > Brand cover image) */}
-      {heroImage ? (
+      {/* Homepage Promo Slider or Fallback Hero Banner */}
+      {slides.length > 0 ? (
+        <PromoSlider slides={slides} />
+      ) : heroImage ? (
         <div className="hero-banner-wrapper">
           <Link to="/collections" className="hero-banner-link-card">
             <div
@@ -106,6 +111,32 @@ export default function Homepage() {
           </div>
         </div>
       )}
+
+      {/* Recommended Products Section */}
+      <div className="recommended-products">
+        <h2 className="homepage-section-title">Recommended Products</h2>
+        <Suspense fallback={<div>Loading recommended products...</div>}>
+          <Await resolve={data.recommendedProducts}>
+            {(response) => {
+              const recommendedProductsList =
+                response?.collection?.products?.nodes ||
+                response?.fallbackProducts?.nodes ||
+                [];
+              return (
+                <div className="recommended-products-grid">
+                  {recommendedProductsList.length > 0 ? (
+                    recommendedProductsList.map((product) => (
+                      <ProductItem key={product.id} product={product} />
+                    ))
+                  ) : (
+                    <p>No products found.</p>
+                  )}
+                </div>
+              );
+            }}
+          </Await>
+        </Suspense>
+      </div>
 
       {/* Categories Grid Section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', maxWidth: '1200px', margin: '3rem auto 1.5rem', padding: '0 1rem' }}>
@@ -141,32 +172,6 @@ export default function Homepage() {
           );
         })}
       </div>
-
-      {/* Recommended Products Section */}
-      <div className="recommended-products">
-        <h2 className="homepage-section-title">Recommended Products</h2>
-        <Suspense fallback={<div>Loading recommended products...</div>}>
-          <Await resolve={data.recommendedProducts}>
-            {(response) => {
-              const recommendedProductsList =
-                response?.collection?.products?.nodes ||
-                response?.fallbackProducts?.nodes ||
-                [];
-              return (
-                <div className="recommended-products-grid">
-                  {recommendedProductsList.length > 0 ? (
-                    recommendedProductsList.map((product) => (
-                      <ProductItem key={product.id} product={product} />
-                    ))
-                  ) : (
-                    <p>No products found.</p>
-                  )}
-                </div>
-              );
-            }}
-          </Await>
-        </Suspense>
-      </div>
     </div>
   );
 }
@@ -200,6 +205,26 @@ const HOMEPAGE_COLLECTIONS_QUERY = `#graphql
             width
             height
           }
+        }
+      }
+    }
+    slides: metaobjects(type: "home_slide", first: 10) {
+      nodes {
+        id
+        image: field(key: "image") {
+          reference {
+            ... on MediaImage {
+              image {
+                url
+                altText
+                width
+                height
+              }
+            }
+          }
+        }
+        linkUrl: field(key: "link_url") {
+          value
         }
       }
     }

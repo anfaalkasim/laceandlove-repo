@@ -11,7 +11,7 @@ export function CartSummary({cart, layout}) {
 
   return (
     <div aria-labelledby="cart-summary" className={className}>
-      <h4>Totals</h4>
+      <h4>Order Summary</h4>
       <dl className="cart-subtotal">
         <dt>Subtotal</dt>
         <dd>
@@ -25,6 +25,18 @@ export function CartSummary({cart, layout}) {
       <CartDiscounts discountCodes={cart?.discountCodes} />
       <CartGiftCard giftCardCodes={cart?.appliedGiftCards} />
       <CartCheckoutActions checkoutUrl={cart?.checkoutUrl} />
+      
+      {/* Trust Badges */}
+      <div className="cart-trust-badges">
+        <div className="trust-badge-item">
+          <LockIcon />
+          <span>Secure SSL Checkout & Payment</span>
+        </div>
+        <div className="trust-badge-item">
+          <ShippingIcon />
+          <span>Complimentary delivery on orders over $150</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -36,11 +48,10 @@ function CartCheckoutActions({checkoutUrl}) {
   if (!checkoutUrl) return null;
 
   return (
-    <div>
-      <a href={checkoutUrl} target="_self">
-        <p>Continue to Checkout &rarr;</p>
+    <div className="checkout-actions-row">
+      <a href={checkoutUrl} className="checkout-btn" target="_self">
+        Continue to Checkout
       </a>
-      <br />
     </div>
   );
 }
@@ -57,26 +68,26 @@ function CartDiscounts({discountCodes}) {
       ?.map(({code}) => code) || [];
 
   return (
-    <div>
+    <div className="cart-summary-forms">
       {/* Have existing discount, display it with a remove option */}
-      <dl hidden={!codes.length}>
-        <div>
-          <dt>Discount(s)</dt>
-          <UpdateDiscountForm>
-            <div className="cart-discount">
-              <code>{codes?.join(', ')}</code>
-              &nbsp;
-              <button type="submit" aria-label="Remove discount">
-                Remove
-              </button>
-            </div>
-          </UpdateDiscountForm>
+      {codes.length > 0 && (
+        <div className="applied-discounts-list">
+          {discountCodes?.filter(d => d.applicable).map(d => (
+            <UpdateDiscountForm key={d.code} discountCodes={codes.filter(c => c !== d.code)}>
+              <div className="cart-discount">
+                <code>{d.code}</code>
+                <button type="submit" aria-label={`Remove discount ${d.code}`}>
+                  Remove
+                </button>
+              </div>
+            </UpdateDiscountForm>
+          ))}
         </div>
-      </dl>
+      )}
 
       {/* Show an input to apply a discount */}
       <UpdateDiscountForm discountCodes={codes}>
-        <div>
+        <div className="cart-discount-form-grid">
           <label htmlFor="discount-code-input" className="sr-only">
             Discount code
           </label>
@@ -84,9 +95,8 @@ function CartDiscounts({discountCodes}) {
             id="discount-code-input"
             type="text"
             name="discountCode"
-            placeholder="Discount code"
+            placeholder="Promo Code"
           />
-          &nbsp;
           <button type="submit" aria-label="Apply discount code">
             Apply
           </button>
@@ -132,33 +142,31 @@ function CartGiftCard({giftCardCodes}) {
   }, [giftCardAddFetcher.data]);
 
   return (
-    <div>
+    <div className="cart-summary-forms" style={{borderTop: 'none', padding: '0 0 1.25rem'}}>
       {giftCardCodes && giftCardCodes.length > 0 && (
-        <dl>
-          <dt>Applied Gift Card(s)</dt>
+        <div className="applied-discounts-list">
           {giftCardCodes.map((giftCard) => (
             <RemoveGiftCardForm key={giftCard.id} giftCardId={giftCard.id}>
               <div className="cart-discount">
-                <code>***{giftCard.lastCharacters}</code>
-                &nbsp;
-                <Money data={giftCard.amountUsed} />
-                &nbsp;
+                <span>
+                  <code>***{giftCard.lastCharacters}</code>
+                  &nbsp;(<Money data={giftCard.amountUsed} />)
+                </span>
                 <button type="submit">Remove</button>
               </div>
             </RemoveGiftCardForm>
           ))}
-        </dl>
+        </div>
       )}
 
       <AddGiftCardForm fetcherKey="gift-card-add">
-        <div>
+        <div className="cart-discount-form-grid">
           <input
             type="text"
             name="giftCardCode"
-            placeholder="Gift card code"
+            placeholder="Gift Card Code"
             ref={giftCardCodeInput}
           />
-          &nbsp;
           <button type="submit" disabled={giftCardAddFetcher.state !== 'idle'}>
             Apply
           </button>
@@ -203,6 +211,44 @@ function RemoveGiftCardForm({giftCardId, children}) {
     >
       {children}
     </CartForm>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+      className="trust-badge-icon"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0V10.5m-2.25 1.5h13.5c.621 0 1.125.504 1.125 1.125v7.496c0 .621-.504 1.125-1.125 1.125H5.25a1.125 1.125 0 0 1-1.125-1.125v-7.496c0-.621.504-1.125 1.125-1.125Z"
+      />
+    </svg>
+  );
+}
+
+function ShippingIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+      className="trust-badge-icon"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124l-.304-4.819a2.25 2.25 0 0 0-2.073-2.107l-8.547-.323m-4.5-3L4.5 9h11.25M18 14.25h2.25m-2.25 0V12m0 2.25c0-.621-.504-1.125-1.125-1.125H18m0 0v-2.25m-7.5 12h-1.5v-3h1.5v3Z"
+      />
+    </svg>
   );
 }
 

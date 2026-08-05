@@ -93,22 +93,20 @@ function OrdersTable({orders, filters}) {
  */
 function EmptyOrders({hasFilters = false}) {
   return (
-    <div>
+    <div className="orders-empty-state">
       {hasFilters ? (
         <>
-          <p>No orders found matching your search.</p>
-          <br />
-          <p>
-            <Link to="/account/orders">Clear filters →</Link>
-          </p>
+          <p className="empty-title">No orders found matching your search.</p>
+          <Link to="/account/orders" className="empty-action-btn">
+            Clear filters &rarr;
+          </Link>
         </>
       ) : (
         <>
-          <p>You haven&apos;t placed any orders yet.</p>
-          <br />
-          <p>
-            <Link to="/collections">Start Shopping →</Link>
-          </p>
+          <p className="empty-title">You haven&apos;t placed any orders yet.</p>
+          <Link to="/collections" className="empty-action-btn primary">
+            Start Shopping &rarr;
+          </Link>
         </>
       )}
     </div>
@@ -121,7 +119,7 @@ function EmptyOrders({hasFilters = false}) {
  * }}
  */
 function OrderSearchForm({currentFilters}) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const isSearching =
     navigation.state !== 'idle' &&
@@ -205,22 +203,55 @@ function OrderSearchForm({currentFilters}) {
 function OrderItem({order}) {
   const fulfillmentStatus = flattenConnection(order.fulfillments)[0]?.status;
   return (
-    <>
-      <fieldset>
-        <Link to={`/account/orders/${btoa(order.id)}`}>
-          <strong>#{order.number}</strong>
+    <div className="order-item-card">
+      <div className="order-item-header">
+        <Link to={`/account/orders/${btoa(order.id)}`} className="order-item-number">
+          Order #{order.number}
         </Link>
-        <p>{new Date(order.processedAt).toDateString()}</p>
+        <span className="order-item-date">
+          {new Date(order.processedAt).toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </span>
+      </div>
+
+      <div className="order-item-details">
         {order.confirmationNumber && (
-          <p>Confirmation: {order.confirmationNumber}</p>
+          <div className="order-detail-row">
+            <span className="detail-label">Confirmation:</span>
+            <span className="detail-value">{order.confirmationNumber}</span>
+          </div>
         )}
-        <p>{order.financialStatus}</p>
-        {fulfillmentStatus && <p>{fulfillmentStatus}</p>}
-        <Money data={order.totalPrice} />
-        <Link to={`/account/orders/${btoa(order.id)}`}>View Order →</Link>
-      </fieldset>
-      <br />
-    </>
+        <div className="order-detail-row">
+          <span className="detail-label">Payment:</span>
+          <span className={`detail-status financial-${order.financialStatus?.toLowerCase()}`}>
+            {order.financialStatus}
+          </span>
+        </div>
+        {fulfillmentStatus && (
+          <div className="order-detail-row">
+            <span className="detail-label">Fulfillment:</span>
+            <span className={`detail-status fulfillment-${fulfillmentStatus.toLowerCase()}`}>
+              {fulfillmentStatus}
+            </span>
+          </div>
+        )}
+        <div className="order-detail-row price">
+          <span className="detail-label">Total:</span>
+          <span className="detail-value price-amount">
+            <Money data={order.totalPrice} />
+          </span>
+        </div>
+      </div>
+
+      <div className="order-item-actions">
+        <Link to={`/account/orders/${btoa(order.id)}`} className="order-view-link-btn">
+          View Details
+        </Link>
+      </div>
+    </div>
   );
 }
 

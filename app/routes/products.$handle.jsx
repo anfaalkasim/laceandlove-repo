@@ -1,4 +1,5 @@
 import {useLoaderData} from 'react-router';
+import {useState, useRef} from 'react';
 import {
   getSelectedProductOptions,
   Analytics,
@@ -10,6 +11,7 @@ import {
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductImage} from '~/components/ProductImage';
 import {ProductForm} from '~/components/ProductForm';
+import {ProductAccordions} from '~/components/ProductAccordions';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
 /**
@@ -76,7 +78,7 @@ async function loadCriticalData({context, params, request}) {
  * Make sure to not throw any errors here, as it will cause the page to 500.
  * @param {Route.LoaderArgs}
  */
-function loadDeferredData({context, params}) {
+function loadDeferredData() {
   // Put any API calls that is not critical to be available on first page render
   // For example: product reviews, product recommendations, social feeds.
 
@@ -86,6 +88,8 @@ function loadDeferredData({context, params}) {
 export default function Product() {
   /** @type {LoaderReturnData} */
   const {product} = useLoaderData();
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const sizeGuideRef = useRef(null);
 
   // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
@@ -122,52 +126,150 @@ export default function Product() {
 
   const braTypeValue = getMetafieldDisplayValue(product.bra_type);
   const pantiesTypeValue = getMetafieldDisplayValue(product.panties_type);
-  const hasSpecs = braTypeValue || pantiesTypeValue;
 
   return (
     <div className="product">
       <ProductImage selectedImage={selectedVariant?.image} images={product.images?.nodes} />
       <div className="product-main">
+        {product.vendor && <div className="product-vendor">{product.vendor}</div>}
         <h1>{title}</h1>
+        
+        <div className="product-status-row">
+          <span className={`status-pulse-dot ${!selectedVariant?.availableForSale ? 'low-stock' : ''}`} />
+          <span>
+            {selectedVariant?.availableForSale 
+              ? 'In stock - ready to dispatch' 
+              : 'Currently out of stock'}
+          </span>
+        </div>
+
         <ProductPrice
           price={selectedVariant?.price}
           compareAtPrice={selectedVariant?.compareAtPrice}
         />
-        <br />
+        
         <ProductForm
           productOptions={productOptions}
           selectedVariant={selectedVariant}
+          onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
         />
-        <br />
-
-        {/* Specifications/Attributes Table */}
-        {hasSpecs && (
-          <table className="specs-table">
-            <tbody>
-              {braTypeValue && (
-                <tr className="specs-row">
-                  <td className="specs-label">Bra Style</td>
-                  <td className="specs-value">{braTypeValue}</td>
-                </tr>
-              )}
-              {pantiesTypeValue && (
-                <tr className="specs-row">
-                  <td className="specs-label">Panties Style</td>
-                  <td className="specs-value">{pantiesTypeValue}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-
-        <br />
-        <p>
-          <strong>Description</strong>
-        </p>
-        <br />
-        <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        <br />
+        
+        <ProductAccordions
+          descriptionHtml={descriptionHtml}
+          braType={braTypeValue}
+          pantiesType={pantiesTypeValue}
+        />
       </div>
+
+      {/* Sizing Guide Backdrop Modal */}
+      <div 
+        className={`modal-backdrop ${isSizeGuideOpen ? 'open' : ''}`} 
+        onClick={(e) => {
+          if (sizeGuideRef.current && !sizeGuideRef.current.contains(e.target)) {
+            setIsSizeGuideOpen(false);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setIsSizeGuideOpen(false);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Close size guide"
+      >
+        <div 
+          ref={sizeGuideRef}
+          className="modal-window" 
+        >
+          <div className="modal-header">
+            <h3>Size Guide</h3>
+            <button type="button" className="modal-close-btn" onClick={() => setIsSizeGuideOpen(false)}>
+              &times;
+            </button>
+          </div>
+          <div className="modal-body">
+            <p>Use the chart below to find your perfect fit. If you are between sizes, we recommend choosing the larger size.</p>
+            
+            <h4>Bust & Underband (Bras)</h4>
+            <table className="size-table">
+              <thead>
+                <tr>
+                  <th>Size</th>
+                  <th>Underband (in)</th>
+                  <th>Bust (in)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>XS (30A-30B)</td>
+                  <td>26 - 28</td>
+                  <td>30 - 32</td>
+                </tr>
+                <tr>
+                  <td>S (32A-32C)</td>
+                  <td>28 - 30</td>
+                  <td>32 - 34</td>
+                </tr>
+                <tr>
+                  <td>M (34A-34C)</td>
+                  <td>30 - 32</td>
+                  <td>34 - 36</td>
+                </tr>
+                <tr>
+                  <td>L (36A-36D)</td>
+                  <td>32 - 34</td>
+                  <td>36 - 39</td>
+                </tr>
+                <tr>
+                  <td>XL (38B-38DD)</td>
+                  <td>34 - 36</td>
+                  <td>39 - 42</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h4>Waist & Hips (Panties & Sets)</h4>
+            <table className="size-table">
+              <thead>
+                <tr>
+                  <th>Size</th>
+                  <th>Waist (in)</th>
+                  <th>Hips (in)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>XS</td>
+                  <td>24 - 25</td>
+                  <td>34 - 35</td>
+                </tr>
+                <tr>
+                  <td>S</td>
+                  <td>26 - 27</td>
+                  <td>36 - 37</td>
+                </tr>
+                <tr>
+                  <td>M</td>
+                  <td>28 - 29</td>
+                  <td>38 - 39</td>
+                </tr>
+                <tr>
+                  <td>L</td>
+                  <td>30 - 32</td>
+                  <td>40 - 42</td>
+                </tr>
+                <tr>
+                  <td>XL</td>
+                  <td>33 - 35</td>
+                  <td>43 - 45</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <Analytics.ProductView
         data={{
           products: [

@@ -40,40 +40,77 @@ export function CartMain({layout, cart: originalCart}) {
   const withDiscount =
     cart &&
     Boolean(cart?.discountCodes?.filter((code) => code.applicable)?.length);
-  const className = `cart-main ${withDiscount ? 'with-discount' : ''}`;
+  const className = `cart-main cart-layout-${layout} ${withDiscount ? 'with-discount' : ''}`;
   const cartHasItems = cart?.totalQuantity ? cart.totalQuantity > 0 : false;
   const childrenMap = getLineItemChildrenMap(cart?.lines?.nodes ?? []);
 
+  if (layout === 'aside') {
+    return (
+      <div className={className}>
+        {!linesCount && <CartEmpty layout={layout} />}
+        {cartHasItems && (
+          <div className="cart-layout-aside">
+            <div className="cart-lines-container">
+              <p id="cart-lines" className="sr-only">
+                Line items
+              </p>
+              <ul aria-labelledby="cart-lines" className="cart-lines-list">
+                {(cart?.lines?.nodes ?? []).map((line) => {
+                  if (
+                    'parentRelationship' in line &&
+                    line.parentRelationship?.parent
+                  ) {
+                    return null;
+                  }
+                  return (
+                    <CartLineItem
+                      key={line.id}
+                      line={line}
+                      layout={layout}
+                      childrenMap={childrenMap}
+                    />
+                  );
+                })}
+              </ul>
+            </div>
+            <CartSummary cart={cart} layout={layout} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={className}>
-      <CartEmpty hidden={linesCount} layout={layout} />
-      <div className="cart-details">
-        <p id="cart-lines" className="sr-only">
-          Line items
-        </p>
-        <div>
-          <ul aria-labelledby="cart-lines">
-            {(cart?.lines?.nodes ?? []).map((line) => {
-              // we do not render non-parent lines at the root of the cart
-              if (
-                'parentRelationship' in line &&
-                line.parentRelationship?.parent
-              ) {
-                return null;
-              }
-              return (
-                <CartLineItem
-                  key={line.id}
-                  line={line}
-                  layout={layout}
-                  childrenMap={childrenMap}
-                />
-              );
-            })}
-          </ul>
+      {!linesCount && <CartEmpty layout={layout} />}
+      {cartHasItems && (
+        <div className="cart-details">
+          <p id="cart-lines" className="sr-only">
+            Line items
+          </p>
+          <div>
+            <ul aria-labelledby="cart-lines" className="cart-lines-list">
+              {(cart?.lines?.nodes ?? []).map((line) => {
+                if (
+                  'parentRelationship' in line &&
+                  line.parentRelationship?.parent
+                ) {
+                  return null;
+                }
+                return (
+                  <CartLineItem
+                    key={line.id}
+                    line={line}
+                    layout={layout}
+                    childrenMap={childrenMap}
+                  />
+                );
+              })}
+            </ul>
+          </div>
+          <CartSummary cart={cart} layout={layout} />
         </div>
-        {cartHasItems && <CartSummary cart={cart} layout={layout} />}
-      </div>
+      )}
     </div>
   );
 }
@@ -84,18 +121,59 @@ export function CartMain({layout, cart: originalCart}) {
  *   layout?: CartMainProps['layout'];
  * }}
  */
-function CartEmpty({hidden = false}) {
+function CartEmpty({layout}) {
   const {close} = useAside();
+
+  if (layout === 'aside') {
+    return (
+      <div className="cart-empty">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1}
+          stroke="currentColor"
+          className="cart-empty-svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+          />
+        </svg>
+        <h2>Your bag is empty</h2>
+        <p>
+          Looks like you haven&rsquo;t added anything yet. Let&rsquo;s find you something special.
+        </p>
+        <button type="button" className="cart-empty-btn" onClick={close} style={{border: 'none', cursor: 'pointer'}}>
+          Continue Shopping
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div hidden={hidden}>
-      <br />
+    <div className="cart-empty">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1}
+        stroke="currentColor"
+        className="cart-empty-svg"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+        />
+      </svg>
+      <h2>Your bag is empty</h2>
       <p>
-        Looks like you haven&rsquo;t added anything yet, let&rsquo;s get you
-        started!
+        Looks like you haven&rsquo;t added anything yet. Let&rsquo;s find you something special.
       </p>
-      <br />
-      <Link to="/collections" onClick={close} prefetch="viewport">
-        Continue shopping →
+      <Link to="/collections" className="cart-empty-btn" onClick={close} prefetch="viewport">
+        Continue Shopping
       </Link>
     </div>
   );

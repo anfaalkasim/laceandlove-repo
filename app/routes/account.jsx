@@ -4,7 +4,9 @@ import {
   NavLink,
   Outlet,
   useLoaderData,
+  useLocation,
 } from 'react-router';
+import {useState} from 'react';
 import {CUSTOMER_DETAILS_QUERY} from '~/graphql/customer-account/CustomerDetailsQuery';
 
 export function shouldRevalidate() {
@@ -47,48 +49,85 @@ export default function AccountLayout() {
     : 'Account Details';
 
   return (
-    <div className="account">
-      <h1>{heading}</h1>
-      <br />
-      <AccountMenu />
-      <br />
-      <br />
-      <Outlet context={{customer}} />
+    <div className="account-container">
+      <header className="account-header">
+        <h1>{heading}</h1>
+        {customer?.email && <p className="account-email">{customer.email}</p>}
+      </header>
+
+      <div className="account-dashboard-layout">
+        <AccountMenu />
+        <div className="account-content-outlet">
+          <Outlet context={{customer}} />
+        </div>
+      </div>
     </div>
   );
 }
 
 function AccountMenu() {
-  function isActiveStyle({isActive, isPending}) {
-    return {
-      fontWeight: isActive ? 'bold' : undefined,
-      color: isPending ? 'grey' : 'black',
-    };
-  }
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+
+  const getActiveTabLabel = () => {
+    if (location.pathname.includes('/account/orders')) return 'Orders';
+    if (location.pathname.includes('/account/profile')) return 'Profile';
+    if (location.pathname.includes('/account/addresses')) return 'Addresses';
+    return 'Menu';
+  };
 
   return (
-    <nav role="navigation">
-      <NavLink to="/account/orders" style={isActiveStyle}>
-        Orders &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/profile" style={isActiveStyle}>
-        &nbsp; Profile &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/addresses" style={isActiveStyle}>
-        &nbsp; Addresses &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
-      <Logout />
-    </nav>
+    <div className="account-menu-wrapper">
+      {/* Mobile Hamburger Trigger */}
+      <button
+        type="button"
+        className="account-menu-mobile-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        <span className="hamburger-icon">☰</span>
+        <span className="trigger-label">{getActiveTabLabel()}</span>
+        <span className="chevron-icon">{isOpen ? '▲' : '▼'}</span>
+      </button>
+
+      <nav className={`account-tabs-nav ${isOpen ? 'open' : ''}`} role="navigation">
+        <NavLink
+          to="/account/profile"
+          onClick={() => setIsOpen(false)}
+          className={({isActive}) => `account-tab-link${isActive ? ' active' : ''}`}
+        >
+          Profile
+        </NavLink>
+        <NavLink
+          to="/account/orders"
+          onClick={() => setIsOpen(false)}
+          className={({isActive}) => `account-tab-link${isActive ? ' active' : ''}`}
+        >
+          Orders
+        </NavLink>
+        <NavLink
+          to="/account/addresses"
+          onClick={() => setIsOpen(false)}
+          className={({isActive}) => `account-tab-link${isActive ? ' active' : ''}`}
+        >
+          Addresses
+        </NavLink>
+        <Logout onClick={() => setIsOpen(false)} />
+      </nav>
+    </div>
   );
 }
 
-function Logout() {
+function Logout({onClick}) {
   return (
     <Form className="account-logout" method="POST" action="/account/logout">
-      &nbsp;<button type="submit">Sign out</button>
+      <button
+        type="submit"
+        onClick={onClick}
+        className="account-tab-link logout-btn"
+      >
+        Sign out
+      </button>
     </Form>
   );
 }

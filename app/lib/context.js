@@ -36,6 +36,8 @@ export async function createHydrogenRouterContext(
     AppSession.init(request, [env.SESSION_SECRET]),
   ]);
 
+  let customerAccountRef = {current: null};
+
   const hydrogenContext = createHydrogenContext(
     {
       env,
@@ -47,12 +49,227 @@ export async function createHydrogenRouterContext(
       i18n: {language: 'EN', country: 'US'},
       cart: {
         queryFragment: CART_QUERY_FRAGMENT,
+        getId() {
+          const customerId = session.get('loggedInCustomerId');
+          const cookieHeader = request.headers.get('Cookie');
+          let cartId = null;
+
+          if (customerId) {
+            const cleanId = btoa(customerId).replace(/=/g, '');
+            cartId =
+              session.get('loggedInCustomerCartId') ||
+              getCookie(cookieHeader, `cart_${cleanId}`);
+            if (!cartId) {
+              cartId =
+                getCookie(cookieHeader, 'cart_guest') ||
+                getCookie(cookieHeader, 'cart');
+            }
+          } else {
+            cartId =
+              getCookie(cookieHeader, 'cart_guest') ||
+              getCookie(cookieHeader, 'cart');
+          }
+
+          if (cartId) {
+            cartId = decodeURIComponent(cartId);
+            const prefix = 'gid://shopify/Cart/';
+            if (!cartId.startsWith(prefix)) {
+              cartId = `${prefix}${cartId}`;
+            }
+          }
+          return cartId;
+        },
+        setId(cartId) {
+          const customerId = session.get('loggedInCustomerId');
+          const headers = new Headers();
+          headers.append(
+            'Set-Cookie',
+            `cart=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
+          );
+          if (customerId) {
+            const cleanId = btoa(customerId).replace(/=/g, '');
+            headers.append(
+              'Set-Cookie',
+              `cart_${cleanId}=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
+            );
+
+            const cachedCartId = session.get('loggedInCustomerCartId');
+            if (cachedCartId !== cartId) {
+              session.set('loggedInCustomerCartId', cartId);
+              saveCartIdToShopify(
+                customerAccountRef.current,
+                customerId,
+                cartId,
+                waitUntil,
+              );
+            }
+          } else {
+            headers.append(
+              'Set-Cookie',
+              `cart_guest=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
+            );
+          }
+          return headers;
+        },
       },
     },
     additionalContext,
   );
 
+  customerAccountRef.current = hydrogenContext.customerAccount;
+
+  // Initialize and cache customer ID synchronously in the session if logged in
+  const customerAccount = hydrogenContext.customerAccount;
+  const isLoggedIn = await customerAccount.isLoggedIn();
+  if (isLoggedIn) {
+    try {
+      // 1. Fetch customer ID (guaranteed to succeed if authenticated)
+      const {data} = await customerAccount.query(`
+        query getCustomerId {
+          customer {
+            id
+          }
+        }
+      `);
+      if (data?.customer?.id) {
+        const customerId = data.customer.id;
+        session.set('loggedInCustomerId', customerId);
+
+        // 2. Fetch customer cart metafield (defensively, to handle missing schema/fields)
+        try {
+          const metafieldData = await customerAccount.query(`
+            query getCustomerCartMetafield {
+              customer {
+                cartId: metafield(namespace: "custom", key: "cart_id") {
+                  value
+                }
+              }
+            }
+          `);
+          const shopifyCartId = metafieldData?.data?.customer?.cartId?.value;
+          if (shopifyCartId) {
+            session.set('loggedInCustomerCartId', decodeURIComponent(shopifyCartId));
+          } else {
+            const cookieHeader = request.headers.get('Cookie');
+            const cleanId = btoa(customerId).replace(/=/g, '');
+            const localCustomerCartId = getCookie(cookieHeader, `cart_${cleanId}`);
+
+            if (localCustomerCartId) {
+              session.set('loggedInCustomerCartId', localCustomerCartId);
+              saveCartIdToShopify(
+                customerAccount,
+                customerId,
+                localCustomerCartId,
+                waitUntil,
+              );
+            } else {
+              const guestCartId =
+                getCookie(cookieHeader, 'cart_guest') ||
+                getCookie(cookieHeader, 'cart');
+              if (guestCartId) {
+                session.set('loggedInCustomerCartId', guestCartId);
+                saveCartIdToShopify(
+                  customerAccount,
+                  customerId,
+                  guestCartId,
+                  waitUntil,
+                );
+              }
+            }
+          }
+        } catch (metafieldError) {
+          // Fall back to local cookie mappings if Shopify metafield fails
+          const cookieHeader = request.headers.get('Cookie');
+          const cleanId = btoa(customerId).replace(/=/g, '');
+          const customerCartId =
+            getCookie(cookieHeader, `cart_${cleanId}`) ||
+            getCookie(cookieHeader, 'cart_guest') ||
+            getCookie(cookieHeader, 'cart');
+          if (customerCartId) {
+            session.set('loggedInCustomerCartId', customerCartId);
+          }
+        }
+      }
+    } catch (error) {
+      // Ignore login-query errors
+    }
+  } else {
+    session.unset('loggedInCustomerId');
+    session.unset('loggedInCustomerCartId');
+  }
+
   return hydrogenContext;
+}
+
+
+
+/**
+ * Reads a specific cookie value from the request cookie header
+ * @param {string | null} cookieHeader
+ * @param {string} name
+ * @returns {string | null}
+ */
+function getCookie(cookieHeader, name) {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(
+    new RegExp('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)'),
+  );
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+/**
+ * Saves the cart ID to the customer's metafield on Shopify
+ * @param {any} customerAccount
+ * @param {string} customerId
+ * @param {string} cartId
+ * @param {any} waitUntil
+ */
+function saveCartIdToShopify(customerAccount, customerId, cartId, waitUntil) {
+  if (!customerAccount || !customerId || !cartId) return;
+
+  const promise = customerAccount
+    .mutate(
+      `
+    mutation updateCustomerCart($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields {
+          id
+          value
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `,
+      {
+        variables: {
+          metafields: [
+            {
+              ownerId: customerId,
+              namespace: 'custom',
+              key: 'cart_id',
+              value: cartId,
+              type: 'single_line_text_field',
+            },
+          ],
+        },
+      },
+    )
+    .then((res) => {
+      if (res?.data?.metafieldsSet?.userErrors?.length) {
+        console.warn(
+          'Shopify metafield save userErrors:',
+          res.data.metafieldsSet.userErrors,
+        );
+      }
+    })
+    .catch((error) => {
+      console.error('Error saving cart ID to customer profile:', error);
+    });
+
+  waitUntil(promise);
 }
 
 /** @typedef {Class<additionalContext>} AdditionalContextType */

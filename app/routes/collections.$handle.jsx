@@ -1,4 +1,4 @@
-import {redirect, useLoaderData, Link} from 'react-router';
+import {redirect, useLoaderData} from 'react-router';
 import {useState} from 'react';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
@@ -112,7 +112,7 @@ async function loadCriticalData({context, params, request}) {
 /**
  * Load data for rendering content below the fold.
  */
-function loadDeferredData({context}) {
+function loadDeferredData() {
   return {};
 }
 
@@ -133,7 +133,7 @@ const getMetafieldDisplayValue = (metafield) => {
 
 export default function Collection() {
   /** @type {LoaderReturnData} */
-  const {collection, subcategories} = useLoaderData();
+  const {collection} = useLoaderData();
 
   // State hooks for filter modal (supporting multiple selections)
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
@@ -281,8 +281,24 @@ export default function Collection() {
 
       {/* Tabbed Drawer Filter Overlay Modal */}
       {isFilterOpen && (
-        <div className="filter-overlay-backdrop" onClick={() => setIsFilterOpen(false)}>
-          <div className="filter-modal-window" onClick={(e) => e.stopPropagation()}>
+        <div
+          role="button"
+          tabIndex={0}
+          className="filter-overlay-backdrop"
+          onClick={() => setIsFilterOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setIsFilterOpen(false);
+            }
+          }}
+        >
+          <div
+            role="button"
+            tabIndex={0}
+            className="filter-modal-window"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <div className="filter-modal-header">
               <h3>Filters</h3>
               <button

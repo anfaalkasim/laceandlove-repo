@@ -32,9 +32,14 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
  * }}
  */
 function FooterMenu({menu, primaryDomainUrl, publicStoreDomain}) {
+  const menuItems = (menu || FALLBACK_FOOTER_MENU).items || [];
+  const filteredItems = menuItems.filter(
+    (item) => !item.title || item.title.toLowerCase() !== 'search'
+  );
+
   return (
     <nav className="footer-menu" role="navigation">
-      {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
+      {filteredItems.map((item) => {
         if (!item.url) return null;
         // if the url is internal, we strip the domain
         const url =
