@@ -1,5 +1,5 @@
 import {CartForm, Money} from '@shopify/hydrogen';
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 
 /**
@@ -22,8 +22,10 @@ export function CartSummary({cart, layout}) {
           )}
         </dd>
       </dl>
-      <CartDiscounts discountCodes={cart?.discountCodes} />
-      <CartGiftCard giftCardCodes={cart?.appliedGiftCards} />
+      <CartPromotionalCodes
+        discountCodes={cart?.discountCodes}
+        giftCardCodes={cart?.appliedGiftCards}
+      />
       <CartCheckoutActions checkoutUrl={cart?.checkoutUrl} />
       
       {/* Trust Badges */}
@@ -57,52 +59,162 @@ function CartCheckoutActions({checkoutUrl}) {
 }
 
 /**
- * @param {{
- *   discountCodes?: CartApiQueryFragment['discountCodes'];
- * }}
+ * Combined promo code & gift card form using a collapsible accordion
  */
-function CartDiscounts({discountCodes}) {
-  const codes =
+function CartPromotionalCodes({discountCodes, giftCardCodes}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const giftCardCodeInput = useRef(null);
+  const giftCardAddFetcher = useFetcher({key: 'gift-card-add'});
+
+  useEffect(() => {
+    if (giftCardAddFetcher.data) {
+      if (giftCardCodeInput.current) {
+        giftCardCodeInput.current.value = '';
+      }
+    }
+  }, [giftCardAddFetcher.data]);
+
+  const activeDiscounts =
     discountCodes
       ?.filter((discount) => discount.applicable)
       ?.map(({code}) => code) || [];
 
-  return (
-    <div className="cart-summary-forms">
-      {/* Have existing discount, display it with a remove option */}
-      {codes.length > 0 && (
-        <div className="applied-discounts-list">
-          {discountCodes?.filter(d => d.applicable).map(d => (
-            <UpdateDiscountForm key={d.code} discountCodes={codes.filter(c => c !== d.code)}>
-              <div className="cart-discount">
-                <code>{d.code}</code>
-                <button type="submit" aria-label={`Remove discount ${d.code}`}>
-                  Remove
-                </button>
-              </div>
-            </UpdateDiscountForm>
-          ))}
-        </div>
-      )}
+  const hasAppliedCodes =
+    activeDiscounts.length > 0 || (giftCardCodes && giftCardCodes.length > 0);
 
-      {/* Show an input to apply a discount */}
-      <UpdateDiscountForm discountCodes={codes}>
-        <div className="cart-discount-form-grid">
-          <label htmlFor="discount-code-input" className="sr-only">
-            Discount code
-          </label>
-          <input
-            id="discount-code-input"
-            type="text"
-            name="discountCode"
-            placeholder="Promo Code"
-          />
-          <button type="submit" aria-label="Apply discount code">
-            Apply
-          </button>
+  return (
+    <div className="cart-promo-container">
+      <button
+        type="button"
+        className="cart-promo-toggle"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        <span>🏷️ Apply Promo Code or Gift Card</span>
+        <ChevronIcon isOpen={isOpen} />
+      </button>
+
+      <div
+        className={`cart-promo-content ${
+          isOpen || hasAppliedCodes ? 'open' : ''
+        }`}
+      >
+        {/* Applied Codes Lists */}
+        {hasAppliedCodes && (
+          <div className="applied-codes-container">
+            {/* Applied Discounts */}
+            {activeDiscounts.map((code) => (
+              <UpdateDiscountForm
+                key={code}
+                discountCodes={activeDiscounts.filter((c) => c !== code)}
+              >
+                <div className="applied-code-pill">
+                  <span className="pill-label">
+                    Promo: <strong>{code}</strong>
+                  </span>
+                  <button
+                    type="submit"
+                    className="pill-remove-btn"
+                    aria-label={`Remove discount ${code}`}
+                  >
+                    &times;
+                  </button>
+                </div>
+              </UpdateDiscountForm>
+            ))}
+
+            {/* Applied Gift Cards */}
+            {giftCardCodes &&
+              giftCardCodes.map((giftCard) => (
+                <RemoveGiftCardForm key={giftCard.id} giftCardId={giftCard.id}>
+                  <div className="applied-code-pill">
+                    <span className="pill-label">
+                      Gift Card:{' '}
+                      <strong>***{giftCard.lastCharacters}</strong> (
+                      <Money data={giftCard.amountUsed} />)
+                    </span>
+                    <button
+                      type="submit"
+                      className="pill-remove-btn"
+                      aria-label="Remove gift card"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </RemoveGiftCardForm>
+              ))}
+          </div>
+        )}
+
+        {/* Inputs */}
+        <div className="promo-inputs-grid">
+          {/* Discount code form */}
+          <UpdateDiscountForm discountCodes={activeDiscounts}>
+            <div className="promo-input-row">
+              <input
+                id="discount-code-input"
+                type="text"
+                name="discountCode"
+                placeholder="Promo Code"
+                className="promo-text-input"
+              />
+              <button
+                type="submit"
+                className="promo-apply-btn"
+                aria-label="Apply discount code"
+              >
+                Apply
+              </button>
+            </div>
+          </UpdateDiscountForm>
+
+          {/* Gift Card form */}
+          <AddGiftCardForm fetcherKey="gift-card-add">
+            <div className="promo-input-row">
+              <input
+                type="text"
+                name="giftCardCode"
+                placeholder="Gift Card Code"
+                ref={giftCardCodeInput}
+                className="promo-text-input"
+              />
+              <button
+                type="submit"
+                className="promo-apply-btn"
+                disabled={giftCardAddFetcher.state !== 'idle'}
+              >
+                Apply
+              </button>
+            </div>
+          </AddGiftCardForm>
         </div>
-      </UpdateDiscountForm>
+      </div>
     </div>
+  );
+}
+
+function ChevronIcon({isOpen}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+      className={`chevron-icon ${isOpen ? 'rotated' : ''}`}
+      style={{
+        width: '14px',
+        height: '14px',
+        transition: 'transform 200ms ease',
+        transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+      }}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m19.5 8.25-7.5 7.5-7.5-7.5"
+      />
+    </svg>
   );
 }
 
@@ -123,56 +235,6 @@ function UpdateDiscountForm({discountCodes, children}) {
     >
       {children}
     </CartForm>
-  );
-}
-
-/**
- * @param {{
- *   giftCardCodes: CartApiQueryFragment['appliedGiftCards'] | undefined;
- * }}
- */
-function CartGiftCard({giftCardCodes}) {
-  const giftCardCodeInput = useRef(null);
-  const giftCardAddFetcher = useFetcher({key: 'gift-card-add'});
-
-  useEffect(() => {
-    if (giftCardAddFetcher.data) {
-      giftCardCodeInput.current.value = '';
-    }
-  }, [giftCardAddFetcher.data]);
-
-  return (
-    <div className="cart-summary-forms" style={{borderTop: 'none', padding: '0 0 1.25rem'}}>
-      {giftCardCodes && giftCardCodes.length > 0 && (
-        <div className="applied-discounts-list">
-          {giftCardCodes.map((giftCard) => (
-            <RemoveGiftCardForm key={giftCard.id} giftCardId={giftCard.id}>
-              <div className="cart-discount">
-                <span>
-                  <code>***{giftCard.lastCharacters}</code>
-                  &nbsp;(<Money data={giftCard.amountUsed} />)
-                </span>
-                <button type="submit">Remove</button>
-              </div>
-            </RemoveGiftCardForm>
-          ))}
-        </div>
-      )}
-
-      <AddGiftCardForm fetcherKey="gift-card-add">
-        <div className="cart-discount-form-grid">
-          <input
-            type="text"
-            name="giftCardCode"
-            placeholder="Gift Card Code"
-            ref={giftCardCodeInput}
-          />
-          <button type="submit" disabled={giftCardAddFetcher.state !== 'idle'}>
-            Apply
-          </button>
-        </div>
-      </AddGiftCardForm>
-    </div>
   );
 }
 

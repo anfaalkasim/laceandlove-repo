@@ -1,5 +1,5 @@
 import {Suspense} from 'react';
-import {Await, NavLink, useAsyncValue} from 'react-router';
+import {Await, Link, NavLink, useAsyncValue} from 'react-router';
 import {useAnalytics, useOptimisticCart} from '@shopify/hydrogen';
 import {useAside} from '~/components/Aside';
 
@@ -234,16 +234,13 @@ function SearchToggle() {
  * @param {{count: number | null}}
  */
 function CartBadge({count}) {
-  const {open} = useAside();
   const {publish, shop, cart, prevCart} = useAnalytics();
 
   return (
-    <a
-      href="/cart"
+    <Link
+      to="/cart"
       className="header-cart-toggle"
-      onClick={(e) => {
-        e.preventDefault();
-        open('cart');
+      onClick={() => {
         publish('cart_viewed', {
           cart,
           prevCart,
@@ -259,7 +256,7 @@ function CartBadge({count}) {
           {count}
         </span>
       )}
-    </a>
+    </Link>
   );
 }
 

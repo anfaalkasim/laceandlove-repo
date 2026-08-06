@@ -133,9 +133,6 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide}) 
 
       <AddToCartButton
         disabled={!selectedVariant || !selectedVariant.availableForSale}
-        onClick={() => {
-          open('cart');
-        }}
         lines={
           selectedVariant
             ? [

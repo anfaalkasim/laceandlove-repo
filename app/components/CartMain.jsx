@@ -172,7 +172,7 @@ function CartEmpty({layout}) {
       <p>
         Looks like you haven&rsquo;t added anything yet. Let&rsquo;s find you something special.
       </p>
-      <Link to="/collections" className="cart-empty-btn" onClick={close} prefetch="viewport">
+      <Link to="/" className="cart-empty-btn" onClick={close} prefetch="viewport">
         Continue Shopping
       </Link>
     </div>
