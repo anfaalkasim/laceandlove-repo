@@ -59,6 +59,20 @@ export const CART_QUERY_FRAGMENT = `#graphql
         id
       }
     }
+    discountAllocations {
+      discountedAmount {
+        ...Money
+      }
+      ... on CartAutomaticDiscountAllocation {
+        title
+      }
+      ... on CartCodeDiscountAllocation {
+        code
+      }
+      ... on CartCustomDiscountAllocation {
+        title
+      }
+    }
   }
   fragment CartLineComponent on ComponentizableCartLine {
     id
@@ -111,6 +125,20 @@ export const CART_QUERY_FRAGMENT = `#graphql
     }
     lineComponents {
       ...CartLine
+    }
+    discountAllocations {
+      discountedAmount {
+        ...Money
+      }
+      ... on CartAutomaticDiscountAllocation {
+        title
+      }
+      ... on CartCodeDiscountAllocation {
+        code
+      }
+      ... on CartCustomDiscountAllocation {
+        title
+      }
     }
   }
   fragment CartApiQuery on Cart {
@@ -167,6 +195,20 @@ export const CART_QUERY_FRAGMENT = `#graphql
     discountCodes {
       code
       applicable
+    }
+    discountAllocations {
+      discountedAmount {
+        ...Money
+      }
+      ... on CartAutomaticDiscountAllocation {
+        title
+      }
+      ... on CartCodeDiscountAllocation {
+        code
+      }
+      ... on CartCustomDiscountAllocation {
+        title
+      }
     }
   }
 `;

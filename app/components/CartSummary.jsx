@@ -9,19 +9,121 @@ export function CartSummary({cart, layout}) {
   const className =
     layout === 'page' ? 'cart-summary-page' : 'cart-summary-aside';
 
+  // Group and aggregate discount allocations from both the cart level and line level
+  const discountAllocationsMap = {};
+
+  // 1. Process cart-level discount allocations (if any)
+  const cartAllocations = cart?.discountAllocations || [];
+  for (const allocation of cartAllocations) {
+    const key = allocation.code || allocation.title || 'Discount';
+    const amount = parseFloat(allocation.discountedAmount?.amount || '0');
+    if (amount > 0) {
+      if (!discountAllocationsMap[key]) {
+        discountAllocationsMap[key] = {
+          label: allocation.code
+            ? `Coupon Applied (${allocation.code})`
+            : `Offer Applied (${allocation.title})`,
+          amount: 0,
+          currencyCode: allocation.discountedAmount?.currencyCode,
+        };
+      }
+      discountAllocationsMap[key].amount += amount;
+    }
+  }
+
+  // 2. Process line-level discount allocations from cart lines
+  const lines = cart?.lines?.nodes || [];
+  for (const line of lines) {
+    const lineAllocations = line.discountAllocations || [];
+    for (const allocation of lineAllocations) {
+      const key = allocation.code || allocation.title || 'Discount';
+      const amount = parseFloat(allocation.discountedAmount?.amount || '0');
+      if (amount > 0) {
+        if (!discountAllocationsMap[key]) {
+          discountAllocationsMap[key] = {
+            label: allocation.code
+              ? `Coupon Applied (${allocation.code})`
+              : `Offer Applied (${allocation.title})`,
+            amount: 0,
+            currencyCode: allocation.discountedAmount?.currencyCode,
+          };
+        }
+        discountAllocationsMap[key].amount += amount;
+      }
+    }
+  }
+
+  // Convert the map to an array of consolidated discounts
+  const consolidatedDiscounts = Object.values(discountAllocationsMap).map((d) => ({
+    label: d.label,
+    discountedAmount: {
+      amount: d.amount.toFixed(2),
+      currencyCode: d.currencyCode || 'USD',
+    },
+  }));
+
+  // Calculate total discount across the entire cart
+  const totalDiscount = consolidatedDiscounts.reduce((sum, d) => {
+    return sum + parseFloat(d.discountedAmount.amount);
+  }, 0);
+
+  const hasDiscounts = totalDiscount > 0;
+  const subtotalAmount = parseFloat(cart?.cost?.subtotalAmount?.amount || '0');
+  const originalSubtotalAmount = subtotalAmount + totalDiscount;
+  const currencyCode = cart?.cost?.subtotalAmount?.currencyCode || 'USD';
+
+  const originalSubtotal = {
+    amount: originalSubtotalAmount.toFixed(2),
+    currencyCode
+  };
+
   return (
     <div aria-labelledby="cart-summary" className={className}>
       <h4>Order Summary</h4>
-      <dl className="cart-subtotal">
-        <dt>Subtotal</dt>
-        <dd>
-          {cart?.cost?.subtotalAmount?.amount ? (
-            <Money data={cart?.cost?.subtotalAmount} />
-          ) : (
-            '-'
-          )}
-        </dd>
-      </dl>
+      
+      {hasDiscounts ? (
+        <>
+          <dl className="cart-original-subtotal">
+            <dt>Original Subtotal</dt>
+            <dd>
+              <Money data={originalSubtotal} />
+            </dd>
+          </dl>
+          {consolidatedDiscounts.map((discount, index) => {
+            return (
+              <dl key={index} className="cart-discount-row">
+                <dt>{discount.label}</dt>
+                <dd>
+                  <span>-</span>
+                  <Money data={discount.discountedAmount} />
+                </dd>
+              </dl>
+            );
+          })}
+          <dl className="cart-subtotal">
+            <dt>Subtotal</dt>
+            <dd>
+              {cart?.cost?.subtotalAmount?.amount ? (
+                <Money data={cart?.cost?.subtotalAmount} />
+              ) : (
+                '-'
+              )}
+            </dd>
+          </dl>
+        </>
+      ) : (
+        <dl className="cart-subtotal">
+          <dt>Subtotal</dt>
+          <dd>
+            {cart?.cost?.subtotalAmount?.amount ? (
+              <Money data={cart?.cost?.subtotalAmount} />
+            ) : (
+              '-'
+            )}
+          </dd>
+        </dl>
+      )}
+
       <CartPromotionalCodes
         discountCodes={cart?.discountCodes}
         giftCardCodes={cart?.appliedGiftCards}

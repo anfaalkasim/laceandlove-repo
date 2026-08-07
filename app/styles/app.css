@@ -646,6 +646,59 @@ button.reset:hover:not(:has(> *)) {
   margin: 0;
 }
 
+/* Original Subtotal (Before Discounts) */
+.cart-original-subtotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.cart-original-subtotal dt {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.cart-original-subtotal dd {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  margin: 0;
+  text-decoration: line-through;
+}
+
+/* Discount Allocation Row */
+.cart-discount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  color: #1b8a5a; /* A solid, rich green for applied discounts */
+}
+
+.cart-discount-row dt {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.cart-discount-row dd {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
 /* Promo / Coupon Forms */
 .cart-summary-forms {
   display: flex;
