@@ -17,8 +17,28 @@ import {useAside} from './Aside';
  */
 export function CartLineItem({layout, line, childrenMap}) {
   const {id, merchandise} = line;
-  const {product, title, image, selectedOptions} = merchandise;
+  const {product, title, image: defaultImage, selectedOptions} = merchandise;
   const lineItemUrl = useVariantUrl(product.handle, selectedOptions);
+
+  // Dynamically resolve the first image of the selected variant color
+  const image = (() => {
+    const selectedColor = selectedOptions?.find(
+      (opt) => opt.name.toLowerCase() === 'color'
+    )?.value;
+
+    if (!selectedColor) return defaultImage;
+
+    const variantWithImages = product?.variants?.nodes?.find((variant) => {
+      const hasSameColor = variant.selectedOptions?.some(
+        (opt) => opt.name.toLowerCase() === 'color' && opt.value === selectedColor
+      );
+      const hasGalleryImages = variant.gallery_images?.references?.nodes?.length > 0;
+      return hasSameColor && hasGalleryImages;
+    });
+
+    const firstGalleryImage = variantWithImages?.gallery_images?.references?.nodes?.[0]?.image;
+    return firstGalleryImage || defaultImage;
+  })();
   const {close} = useAside();
   const lineItemChildren = childrenMap[id];
   const childrenLabelId = `cart-line-children-${id}`;

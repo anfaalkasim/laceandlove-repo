@@ -10,15 +10,24 @@ import {useState, useEffect} from 'react';
 export function ProductImage({selectedImage, images = []}) {
   const allImages = images && images.length > 0 ? images : selectedImage ? [selectedImage] : [];
 
-  // Track currently active main image in the gallery
-  const [activeImage, setActiveImage] = useState(selectedImage || allImages[0]);
+  // Track if selectedImage belongs to the current color gallery list
+  const isSelectedImageInList =
+    selectedImage && allImages.some((img) => img.id === selectedImage.id);
 
-  // If the variant selection changes and changes the variant image, sync active image state
+  // Track currently active main image in the gallery.
+  // Initialize to the selected image if it belongs to the color gallery, otherwise default to the first image of the gallery.
+  const [activeImage, setActiveImage] = useState(
+    isSelectedImageInList ? selectedImage : allImages[0],
+  );
+
+  // If the variant selection changes, only sync active image state if the new image is part of the current color gallery list
   useEffect(() => {
-    if (selectedImage) {
+    const isSelectedInList =
+      selectedImage && allImages.some((img) => img.id === selectedImage.id);
+    if (isSelectedInList) {
       setActiveImage(selectedImage);
     }
-  }, [selectedImage]);
+  }, [selectedImage, images]);
 
   if (allImages.length === 0) {
     return <div className="product-image" />;

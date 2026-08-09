@@ -47,6 +47,30 @@ export const CART_QUERY_FRAGMENT = `#graphql
           title
           id
           vendor
+          variants(first: 250) {
+            nodes {
+              selectedOptions {
+                name
+                value
+              }
+              gallery_images: metafield(namespace: "custom", key: "gallery_images") {
+                references(first: 1) {
+                  nodes {
+                    ... on MediaImage {
+                      __typename
+                      image {
+                        id
+                        url
+                        altText
+                        width
+                        height
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
         selectedOptions {
           name
@@ -116,6 +140,30 @@ export const CART_QUERY_FRAGMENT = `#graphql
           title
           id
           vendor
+          variants(first: 250) {
+            nodes {
+              selectedOptions {
+                name
+                value
+              }
+              gallery_images: metafield(namespace: "custom", key: "gallery_images") {
+                references(first: 1) {
+                  nodes {
+                    ... on MediaImage {
+                      __typename
+                      image {
+                        id
+                        url
+                        altText
+                        width
+                        height
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
         selectedOptions {
           name

@@ -127,9 +127,35 @@ export default function Product() {
   const braTypeValue = getMetafieldDisplayValue(product.bra_type);
   const pantiesTypeValue = getMetafieldDisplayValue(product.panties_type);
 
+  // Get the selected variant's color
+  const selectedColor = selectedVariant?.selectedOptions?.find(
+    (opt) => opt.name.toLowerCase() === 'color'
+  )?.value;
+
+  // Find any variant of the same color that has gallery images populated
+  const variantWithImages = product.variants?.nodes?.find((variant) => {
+    const hasSameColor = variant.selectedOptions?.some(
+      (opt) => opt.name.toLowerCase() === 'color' && opt.value === selectedColor
+    );
+    const hasGalleryImages = variant.gallery_images?.references?.nodes?.length > 0;
+    return hasSameColor && hasGalleryImages;
+  });
+
+  // Extract the images from the metafield of that variant
+  const variantImages = variantWithImages?.gallery_images?.references?.nodes
+    ?.map((node) => node.image)
+    ?.filter(Boolean) || [];
+
+  // Fallback to the main product images if no variant has gallery images populated
+  const imagesToShow = variantImages.length > 0 ? variantImages : product.images?.nodes || [];
+
   return (
     <div className="product">
-      <ProductImage selectedImage={selectedVariant?.image} images={product.images?.nodes} />
+      <ProductImage
+        key={selectedColor || 'default'}
+        selectedImage={selectedVariant?.image}
+        images={imagesToShow}
+      />
       <div className="product-main">
         {product.vendor && <div className="product-vendor">{product.vendor}</div>}
         <h1>{title}</h1>
@@ -152,6 +178,7 @@ export default function Product() {
           productOptions={productOptions}
           selectedVariant={selectedVariant}
           onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
+          product={product}
         />
         
         <ProductAccordions
@@ -323,6 +350,22 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
       amount
       currencyCode
     }
+    gallery_images: metafield(namespace: "custom", key: "gallery_images") {
+      references(first: 10) {
+        nodes {
+          ... on MediaImage {
+            __typename
+            image {
+              id
+              url
+              altText
+              width
+              height
+            }
+          }
+        }
+      }
+    }
   }
 `;
 
@@ -358,6 +401,11 @@ const PRODUCT_FRAGMENT = `#graphql
     }
     adjacentVariants (selectedOptions: $selectedOptions) {
       ...ProductVariant
+    }
+    variants(first: 250) {
+      nodes {
+        ...ProductVariant
+      }
     }
     seo {
       description
