@@ -9,10 +9,13 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
   const {open} = useAside();
   const shopName = header?.shop?.name || 'LACE & LOVE';
 
+  const menuItems = header?.menu?.items || [];
+  const hasShopifyMenu = menuItems.length > 0;
+
   return (
     <header className="glamor-header">
       <div className="glamor-header-inner">
-        {/* Navigation Links */}
+        {/* Navigation Links: Dynamically mapped from Shopify Admin Navigation menu if configured */}
         <nav className="glamor-nav">
           <NavLink to="/" end className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
             HOME
@@ -20,12 +23,43 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
           <NavLink to="/collections" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
             SHOP
           </NavLink>
-          <NavLink to="/collections/bras" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
-            BRAS
-          </NavLink>
-          <NavLink to="/collections/panties" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
-            PANTIES
-          </NavLink>
+
+          {hasShopifyMenu ? (
+            menuItems.map((item) => {
+              if (!item.url) return null;
+              // Parse relative path from Shopify menu URL if applicable
+              const url = item.url.includes('myshopify.com') || item.url.startsWith('http')
+                ? new URL(item.url).pathname
+                : item.url;
+
+              if (url === '/' || url === '/collections') return null;
+
+              return (
+                <NavLink
+                  key={item.id}
+                  to={url}
+                  className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}
+                >
+                  {item.title.toUpperCase()}
+                </NavLink>
+              );
+            })
+          ) : (
+            <>
+              <NavLink to="/collections/bras" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
+                BRAS
+              </NavLink>
+              <NavLink to="/collections/panties" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
+                PANTIES
+              </NavLink>
+              <NavLink to="/collections/bikini" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
+                BIKINI
+              </NavLink>
+              <NavLink to="/collections/hipster" className={({isActive}) => isActive ? 'glamor-nav-link active' : 'glamor-nav-link'}>
+                HIPSTER
+              </NavLink>
+            </>
+          )}
         </nav>
 
         {/* Centered Brand Logo */}
@@ -74,12 +108,32 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
  */
 export function HeaderMenu({menu, viewport}) {
   const {close} = useAside();
+  const menuItems = menu?.items || [];
+
   return (
-    <nav className="mobile-nav" onClick={close}>
+    <nav className="mobile-nav" onClick={close} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem 0' }}>
       <NavLink to="/" end className="glamor-nav-link">HOME</NavLink>
-      <NavLink to="/collections" className="glamor-nav-link">SHOP</NavLink>
-      <NavLink to="/collections/bras" className="glamor-nav-link">BRAS</NavLink>
-      <NavLink to="/collections/panties" className="glamor-nav-link">PANTIES</NavLink>
+      <NavLink to="/collections" className="glamor-nav-link">SHOP ALL</NavLink>
+      {menuItems.length > 0 ? (
+        menuItems.map((item) => {
+          const url = item.url.includes('myshopify.com') || item.url.startsWith('http')
+            ? new URL(item.url).pathname
+            : item.url;
+          if (url === '/' || url === '/collections') return null;
+          return (
+            <NavLink key={item.id} to={url} className="glamor-nav-link">
+              {item.title.toUpperCase()}
+            </NavLink>
+          );
+        })
+      ) : (
+        <>
+          <NavLink to="/collections/bras" className="glamor-nav-link">BRAS</NavLink>
+          <NavLink to="/collections/panties" className="glamor-nav-link">PANTIES</NavLink>
+          <NavLink to="/collections/bikini" className="glamor-nav-link">BIKINI</NavLink>
+          <NavLink to="/collections/hipster" className="glamor-nav-link">HIPSTER</NavLink>
+        </>
+      )}
     </nav>
   );
 }

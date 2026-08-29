@@ -1,8 +1,9 @@
+import {useState} from 'react';
 import {Link} from 'react-router';
 import {Money} from '@shopify/hydrogen';
 import {useVariantUrl} from '~/lib/variants';
 
-// Local high-resolution Codezeel Glamor Demo image pairs (Primary & Hover)
+// High-resolution local Codezeel Glamor Demo image pairs (Primary & Hover)
 const DEMO_IMAGE_PAIRS = [
   {
     primary: '/images/product-09.jpg',
@@ -25,10 +26,63 @@ const DEMO_IMAGE_PAIRS = [
     secondary: '/images/product-15-hover.jpg',
   },
   {
-    primary: '/images/product-19.jpg',
+    primary: '/images/product-03.jpg',
     secondary: '/images/product-09-hover.jpg',
   },
+  {
+    primary: '/images/product-19.jpg',
+    secondary: '/images/product-10-hover.jpg',
+  },
 ];
+
+const COLOR_HEX_MAP = {
+  black: '#121212',
+  'black silk': '#121212',
+  green: '#2D5A27',
+  gray: '#808080',
+  grey: '#808080',
+  red: '#D32F2F',
+  pink: '#E62A65',
+  'rose pink': '#FFB3C6',
+  'dusty rose': '#D8A7B1',
+  nude: '#E8D4C8',
+  'cream nude': '#F5E8D3',
+  cream: '#FFFDD0',
+  white: '#FFFFFF',
+  navy: '#0B192C',
+  blue: '#1976D2',
+  gold: '#D4AF37',
+  purple: '#6B46C1',
+  beige: '#F5F5DC',
+};
+
+/**
+ * Dynamically extract unique color options from product options & variants
+ */
+function extractDynamicSwatches(product) {
+  const options = product?.options || [];
+  const colorOpt = options.find(o => o.name?.toLowerCase().includes('color') || o.name?.toLowerCase().includes('colour'));
+  
+  let colorNames = [];
+  if (colorOpt && colorOpt.values) {
+    colorNames = colorOpt.values;
+  } else if (product?.variants?.nodes) {
+    const variantColors = product.variants.nodes.flatMap(v => 
+      (v.selectedOptions || []).filter(o => o.name?.toLowerCase().includes('color') || o.name?.toLowerCase().includes('colour')).map(o => o.value)
+    );
+    colorNames = Array.from(new Set(variantColors));
+  }
+
+  // If no color options present on product, fallback to standard intimates color swatches
+  if (colorNames.length === 0) {
+    colorNames = ['Black Silk', 'Rose Pink', 'Cream Nude'];
+  }
+
+  return colorNames.slice(0, 5).map(c => ({
+    name: c,
+    hex: COLOR_HEX_MAP[c.toLowerCase()] || '#121212',
+  }));
+}
 
 /**
  * @param {{
@@ -43,15 +97,23 @@ export function ProductItem({product, loading}) {
   const variantUrl = useVariantUrl(product.handle);
   
   const hash = (product?.id || product?.handle || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const fallbackPair = DEMO_IMAGE_PAIRS[hash % DEMO_IMAGE_PAIRS.length];
+  const fallbackPair = DEMO_IMAGE_PAIRS[Math.abs(hash) % DEMO_IMAGE_PAIRS.length];
 
-  const primaryUrl = product?.featuredImage?.url || fallbackPair.primary;
-  const secondaryUrl = product?.images?.nodes?.[1]?.url || fallbackPair.secondary;
+  let rawPrimary = product?.featuredImage?.url;
+  let rawSecondary = product?.images?.nodes?.[1]?.url || product?.images?.nodes?.[0]?.url;
+
+  // Use local HD images if remote burst URL is slow/broken or null
+  const primaryUrl = (rawPrimary && !rawPrimary.includes('burst.shopifycdn.com')) ? rawPrimary : fallbackPair.primary;
+  const secondaryUrl = (rawSecondary && !rawSecondary.includes('burst.shopifycdn.com')) ? rawSecondary : fallbackPair.secondary;
 
   const compareAtPrice = product.compareAtPriceRange?.minVariantPrice || product.variants?.nodes?.[0]?.compareAtPrice || null;
   const price = product.priceRange?.minVariantPrice;
 
   const isSale = compareAtPrice && parseFloat(compareAtPrice.amount) > parseFloat(price?.amount || '0');
+
+  // Dynamic Color Swatches
+  const swatches = extractDynamicSwatches(product);
+  const [activeSwatch, setActiveSwatch] = useState(swatches[0]?.name || '');
 
   return (
     <div className="glamor-product-card">
@@ -93,10 +155,32 @@ export function ProductItem({product, loading}) {
         </div>
       </div>
 
-      <div className="glamor-swatches">
-        <span className="glamor-swatch-dot" style={{ backgroundColor: '#121212' }} />
-        <span className="glamor-swatch-dot" style={{ backgroundColor: '#E62A65' }} />
-        <span className="glamor-swatch-dot" style={{ backgroundColor: '#F5E8D3' }} />
+      {/* Dynamic Swatches Section under Product Card */}
+      <div className="glamor-swatches" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0.6rem 0' }}>
+        {swatches.map((swatch, i) => (
+          <span
+            key={i}
+            title={swatch.name}
+            onClick={() => setActiveSwatch(swatch.name)}
+            className={`glamor-swatch-dot ${activeSwatch === swatch.name ? 'active' : ''}`}
+            style={{
+              backgroundColor: swatch.hex,
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              display: 'inline-block',
+              cursor: 'pointer',
+              border: activeSwatch === swatch.name ? '2px solid #121212' : '1px solid rgba(0,0,0,0.15)',
+              transform: activeSwatch === swatch.name ? 'scale(1.25)' : 'scale(1.0)',
+              transition: 'all 0.2s ease',
+            }}
+          />
+        ))}
+        {swatches.length > 0 && (
+          <span style={{ fontSize: '0.7rem', color: '#777', marginLeft: '4px', textTransform: 'capitalize' }}>
+            {activeSwatch}
+          </span>
+        )}
       </div>
 
       <div className="glamor-product-info">

@@ -1,14 +1,203 @@
 import {useLoaderData, Link} from 'react-router';
-import {useState} from 'react';
+import {useState, useMemo} from 'react';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {ProductItem} from '~/components/ProductItem';
+
+// High-resolution local demo product dataset
+const CSV_DEMO_PRODUCTS = [
+  {
+    id: 'gid://shopify/Product/1001',
+    title: 'Delicate Lace Underwire Bra',
+    handle: 'delicate-lace-underwire-bra',
+    vendor: 'Lace & Love',
+    featuredImage: {
+      id: 'img-lace-bra',
+      url: '/images/product-09.jpg',
+      altText: 'Delicate Lace Underwire Bra',
+      width: 1000,
+      height: 1000,
+    },
+    images: {
+      nodes: [
+        { id: 'img-bra-1', url: '/images/product-09.jpg', altText: 'Lace Bra' },
+        { id: 'img-bra-2', url: '/images/product-09-hover.jpg', altText: 'Lace Bra Hover' },
+      ],
+    },
+    priceRange: {
+      minVariantPrice: { amount: '48.00', currencyCode: 'USD' },
+      maxVariantPrice: { amount: '48.00', currencyCode: 'USD' },
+    },
+    compareAtPriceRange: {
+      minVariantPrice: { amount: '65.00', currencyCode: 'USD' },
+    },
+    variants: {
+      nodes: [
+        { id: 'v-bra-s', title: 'Small / Black Silk', availableForSale: true, price: { amount: '48.00', currencyCode: 'USD' }, compareAtPrice: { amount: '65.00', currencyCode: 'USD' }, selectedOptions: [{ name: 'Size', value: 'S' }] },
+      ],
+    },
+  },
+  {
+    id: 'gid://shopify/Product/1002',
+    title: 'Sports Comfort Seamless Bra',
+    handle: 'sports-comfort-seamless-bra',
+    vendor: 'Lace & Love',
+    featuredImage: {
+      id: 'img-sports-bra',
+      url: '/images/product-10.jpg',
+      altText: 'Sports Comfort Seamless Bra',
+      width: 1000,
+      height: 1000,
+    },
+    images: {
+      nodes: [
+        { id: 'img-sports-1', url: '/images/product-10.jpg', altText: 'Sports Bra' },
+        { id: 'img-sports-2', url: '/images/product-10-hover.jpg', altText: 'Sports Bra Hover' },
+      ],
+    },
+    priceRange: {
+      minVariantPrice: { amount: '38.00', currencyCode: 'USD' },
+      maxVariantPrice: { amount: '38.00', currencyCode: 'USD' },
+    },
+    compareAtPriceRange: {
+      minVariantPrice: { amount: '50.00', currencyCode: 'USD' },
+    },
+    variants: {
+      nodes: [
+        { id: 'v-sports-s', title: 'Small / Rose Pink', availableForSale: true, price: { amount: '38.00', currencyCode: 'USD' }, compareAtPrice: { amount: '50.00', currencyCode: 'USD' }, selectedOptions: [{ name: 'Size', value: 'S' }] },
+      ],
+    },
+  },
+  {
+    id: 'gid://shopify/Product/1003',
+    title: 'Silk Camisole Bralette',
+    handle: 'silk-camisole-bralette',
+    vendor: 'Lace & Love',
+    featuredImage: {
+      id: 'img-cami-bra',
+      url: '/images/product-11.jpg',
+      altText: 'Silk Camisole Bralette',
+      width: 1000,
+      height: 1000,
+    },
+    images: {
+      nodes: [
+        { id: 'img-cami-1', url: '/images/product-11.jpg', altText: 'Camisole Bralette' },
+        { id: 'img-cami-2', url: '/images/product-11-hover.jpg', altText: 'Camisole Hover' },
+      ],
+    },
+    priceRange: {
+      minVariantPrice: { amount: '42.00', currencyCode: 'USD' },
+      maxVariantPrice: { amount: '42.00', currencyCode: 'USD' },
+    },
+    compareAtPriceRange: {
+      minVariantPrice: { amount: '55.00', currencyCode: 'USD' },
+    },
+    variants: {
+      nodes: [
+        { id: 'v-cami-s', title: 'Small / Cream Nude', availableForSale: true, price: { amount: '42.00', currencyCode: 'USD' }, compareAtPrice: { amount: '55.00', currencyCode: 'USD' }, selectedOptions: [{ name: 'Size', value: 'S' }] },
+      ],
+    },
+  },
+  {
+    id: 'gid://shopify/Product/1004',
+    title: 'Bikini Cotton Stretch Panties',
+    handle: 'bikini-cotton-stretch-panties',
+    vendor: 'Lace & Love',
+    featuredImage: {
+      id: 'img-bikini-pnt',
+      url: '/images/product-03.jpg',
+      altText: 'Bikini Cotton Stretch Panties',
+      width: 1000,
+      height: 1000,
+    },
+    images: {
+      nodes: [
+        { id: 'img-pnt-1', url: '/images/product-03.jpg', altText: 'Bikini Panties' },
+        { id: 'img-pnt-2', url: '/images/product-09-hover.jpg', altText: 'Bikini Panties Hover' },
+      ],
+    },
+    priceRange: {
+      minVariantPrice: { amount: '18.00', currencyCode: 'USD' },
+      maxVariantPrice: { amount: '18.00', currencyCode: 'USD' },
+    },
+    compareAtPriceRange: {
+      minVariantPrice: { amount: '24.00', currencyCode: 'USD' },
+    },
+    variants: {
+      nodes: [
+        { id: 'v-bikini-s', title: 'Small / Black', availableForSale: true, price: { amount: '18.00', currencyCode: 'USD' }, compareAtPrice: { amount: '24.00', currencyCode: 'USD' }, selectedOptions: [{ name: 'Size', value: 'S' }] },
+      ],
+    },
+  },
+  {
+    id: 'gid://shopify/Product/1005',
+    title: 'Hipster Lace Accent Brief',
+    handle: 'hipster-lace-accent-brief',
+    vendor: 'Lace & Love',
+    featuredImage: {
+      id: 'img-hipster-pnt',
+      url: '/images/product-15.jpg',
+      altText: 'Hipster Lace Accent Brief',
+      width: 1000,
+      height: 1000,
+    },
+    images: {
+      nodes: [
+        { id: 'img-hip-1', url: '/images/product-15.jpg', altText: 'Hipster Brief' },
+        { id: 'img-hip-2', url: '/images/product-15-hover.jpg', altText: 'Hipster Hover' },
+      ],
+    },
+    priceRange: {
+      minVariantPrice: { amount: '22.00', currencyCode: 'USD' },
+      maxVariantPrice: { amount: '22.00', currencyCode: 'USD' },
+    },
+    compareAtPriceRange: {
+      minVariantPrice: { amount: '28.00', currencyCode: 'USD' },
+    },
+    variants: {
+      nodes: [
+        { id: 'v-hip-s', title: 'Small / Rose Pink', availableForSale: true, price: { amount: '22.00', currencyCode: 'USD' }, compareAtPrice: { amount: '28.00', currencyCode: 'USD' }, selectedOptions: [{ name: 'Size', value: 'S' }] },
+      ],
+    },
+  },
+  {
+    id: 'gid://shopify/Product/1006',
+    title: 'Contour High Waist Brief',
+    handle: 'contour-high-waist-brief',
+    vendor: 'Lace & Love',
+    featuredImage: {
+      id: 'img-shapewear',
+      url: '/images/product-12.jpg',
+      altText: 'Contour High Waist Brief',
+      width: 1000,
+      height: 1000,
+    },
+    images: {
+      nodes: [
+        { id: 'img-shp-1', url: '/images/product-12.jpg', altText: 'High Waist Brief' },
+        { id: 'img-shp-2', url: '/images/product-12-hover.jpg', altText: 'High Waist Brief Hover' },
+      ],
+    },
+    priceRange: {
+      minVariantPrice: { amount: '42.00', currencyCode: 'USD' },
+      maxVariantPrice: { amount: '42.00', currencyCode: 'USD' },
+    },
+    compareAtPriceRange: {
+      minVariantPrice: { amount: '55.00', currencyCode: 'USD' },
+    },
+    variants: {
+      nodes: [
+        { id: 'v-shp-m', title: 'Medium / Black', availableForSale: true, price: { amount: '42.00', currencyCode: 'USD' }, compareAtPrice: { amount: '55.00', currencyCode: 'USD' }, selectedOptions: [{ name: 'Size', value: 'M' }] },
+      ],
+    },
+  },
+];
 
 /**
  * @type {Route.MetaFunction}
  */
 export const meta = () => {
-  return [{title: `Lace & Love | All Products`}];
+  return [{title: 'Lace & Love | All Products'}];
 };
 
 /**
@@ -21,16 +210,25 @@ export async function loader(args) {
 }
 
 async function loadCriticalData({context, request}) {
-  const {storefront} = context;
   const paginationVariables = getPaginationVariables(request, {
-    pageBy: 12,
+    pageBy: 24,
   });
 
-  const [{products}] = await Promise.all([
-    storefront.query(CATALOG_QUERY, {
-      variables: {...paginationVariables},
-    }),
-  ]);
+  let products = null;
+  try {
+    const res = await context.storefront.query(ALL_PRODUCTS_QUERY, {
+      variables: paginationVariables,
+    });
+    products = res?.products;
+  } catch (e) {
+    products = null;
+  }
+
+  if (!products?.nodes?.length) {
+    products = {
+      nodes: CSV_DEMO_PRODUCTS,
+    };
+  }
 
   return {products};
 }
@@ -39,100 +237,142 @@ function loadDeferredData() {
   return {};
 }
 
-export default function Collection() {
+export default function AllProducts() {
   /** @type {LoaderReturnData} */
   const {products} = useLoaderData();
   const [gridCols, setGridCols] = useState(3);
   const [sortBy, setSortBy] = useState('featured');
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [onSaleOnly, setOnSaleOnly] = useState(false);
+  const [selectedSize, setSelectedSize] = useState('');
 
-  const categories = [
-    { title: 'Bras & Bralettes', count: 42, handle: 'bras' },
-    { title: 'Panties & Thongs', count: 38, handle: 'panties' },
-    { title: 'Lingerie Sets', count: 24, handle: 'lingerie-sets' },
-    { title: 'Sleepwear & Slips', count: 18, handle: 'sleepwear' },
-    { title: 'Shapewear', count: 12, handle: 'shapewear' },
-  ];
+  const rawProducts = products?.nodes || [];
+
+  // Active Multi-Facet Filtering
+  const filteredProducts = useMemo(() => {
+    return rawProducts.filter((product) => {
+      if (inStockOnly) {
+        const hasStock = product.variants?.nodes?.some(v => v.availableForSale !== false);
+        if (!hasStock) return false;
+      }
+      if (onSaleOnly) {
+        const isSale = product.compareAtPriceRange?.minVariantPrice?.amount ||
+          product.variants?.nodes?.some(v => v.compareAtPrice && parseFloat(v.compareAtPrice.amount) > parseFloat(v.price?.amount || '0'));
+        if (!isSale) return false;
+      }
+      if (selectedSize) {
+        const matchesSize = product.variants?.nodes?.some(v =>
+          v.selectedOptions?.some(opt => opt.name.toLowerCase() === 'size' && opt.value.toUpperCase() === selectedSize) ||
+          v.title?.toUpperCase().includes(selectedSize)
+        );
+        if (!matchesSize) return false;
+      }
+      return true;
+    });
+  }, [rawProducts, inStockOnly, onSaleOnly, selectedSize]);
+
+  // Active Sorting
+  const sortedProducts = useMemo(() => {
+    const list = [...filteredProducts];
+    if (sortBy === 'price-low') {
+      return list.sort((a, b) => {
+        const priceA = parseFloat(a.priceRange?.minVariantPrice?.amount || '0');
+        const priceB = parseFloat(b.priceRange?.minVariantPrice?.amount || '0');
+        return priceA - priceB;
+      });
+    } else if (sortBy === 'price-high') {
+      return list.sort((a, b) => {
+        const priceA = parseFloat(a.priceRange?.minVariantPrice?.amount || '0');
+        const priceB = parseFloat(b.priceRange?.minVariantPrice?.amount || '0');
+        return priceB - priceA;
+      });
+    } else if (sortBy === 'title-asc') {
+      return list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else if (sortBy === 'title-desc') {
+      return list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    }
+    return list;
+  }, [filteredProducts, sortBy]);
 
   return (
     <div className="page-container" style={{ paddingTop: '2rem', paddingBottom: '5rem' }}>
-      {/* Breadcrumb Header Banner */}
+      {/* Full Photo Breadcrumb Banner */}
       <div
         style={{
-          background: '#FAF9F6',
-          padding: '3rem 2rem',
+          position: 'relative',
+          backgroundImage: 'url("/images/hero-bg.jpg")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          padding: '4.5rem 2rem',
           borderRadius: '8px',
           marginBottom: '3rem',
           textAlign: 'center',
+          color: '#fff',
+          overflow: 'hidden',
         }}
       >
-        <p style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>
-          <Link to="/">HOME</Link> &nbsp;/&nbsp; SHOP ALL
-        </p>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 400, margin: 0 }}>All Products</h1>
-        <p style={{ color: '#666', maxWidth: '600px', margin: '0.75rem auto 0', fontSize: '0.95rem' }}>
-          Explore our complete collection of luxury lingerie, intimate wear, and daily essentials.
-        </p>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <p style={{ fontSize: '0.8rem', color: '#e0e0e0', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '0.5rem' }}>
+            <Link to="/" style={{ color: '#fff' }}>HOME</Link> &nbsp;/&nbsp; SHOP ALL
+          </p>
+          <h1 style={{ fontSize: '3rem', fontWeight: 400, margin: 0, textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>All Products</h1>
+        </div>
       </div>
 
       {/* Main PLP 2-Column Layout */}
       <div className="glamor-plp-layout">
-        {/* Left Sidebar Filters Column */}
+        {/* Sidebar Filters */}
         <div className="glamor-sidebar">
-          {/* Categories Widget */}
-          <div className="glamor-widget">
-            <h3 className="glamor-widget-title">Categories</h3>
-            <ul className="glamor-cat-list">
-              {categories.map((cat, i) => (
-                <li key={i}>
-                  <Link to={`/collections/${cat.handle}`} className="glamor-cat-item">
-                    <span>{cat.title}</span>
-                    <span style={{ color: '#aaa', fontSize: '0.8rem' }}>({cat.count})</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Availability Filter */}
           <div className="glamor-widget">
             <h3 className="glamor-widget-title">Availability</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.9rem', color: '#444' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" defaultChecked /> In Stock
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={(e) => setInStockOnly(e.target.checked)}
+                />
+                In Stock Only
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input type="checkbox" /> On Sale
+                <input
+                  type="checkbox"
+                  checked={onSaleOnly}
+                  onChange={(e) => setOnSaleOnly(e.target.checked)}
+                />
+                On Sale Items
               </label>
             </div>
           </div>
 
-          {/* Filter by Size */}
           <div className="glamor-widget">
             <h3 className="glamor-widget-title">Filter By Size</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {['XS', 'S', 'M', 'L', 'XL', '2XL'].map((size) => (
+              {['', 'S', 'M', 'L', 'XL'].map((size) => (
                 <button
-                  key={size}
+                  key={size || 'all'}
+                  onClick={() => setSelectedSize(size)}
                   style={{
                     padding: '0.4rem 0.8rem',
                     border: '1px solid #ddd',
-                    background: '#fff',
+                    background: selectedSize === size ? '#121212' : '#fff',
+                    color: selectedSize === size ? '#fff' : '#121212',
                     borderRadius: '3px',
                     fontSize: '0.75rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
-                  {size}
+                  {size || 'ALL'}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Main Products Grid & Top Bar */}
+        {/* Product Grid & Top Bar */}
         <div>
-          {/* Top Bar (Sort & Column Switcher) */}
           <div
             style={{
               display: 'flex',
@@ -141,10 +381,12 @@ export default function Collection() {
               paddingBottom: '1.25rem',
               marginBottom: '2rem',
               borderBottom: '1px solid #eee',
+              flexWrap: 'wrap',
+              gap: '1rem',
             }}
           >
             <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
-              Showing {products.nodes.length} results
+              Showing <strong>{sortedProducts.length}</strong> {sortedProducts.length === 1 ? 'product' : 'products'}
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -188,85 +430,57 @@ export default function Collection() {
                   borderRadius: '4px',
                   fontSize: '0.85rem',
                   background: '#fff',
+                  cursor: 'pointer',
                 }}
               >
                 <option value="featured">Sort by: Featured</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
-                <option value="latest">Latest Arrivals</option>
+                <option value="title-asc">Alphabetical: A - Z</option>
+                <option value="title-desc">Alphabetical: Z - A</option>
               </select>
             </div>
           </div>
 
-          <PaginatedResourceSection
-            connection={products}
-            resourcesClassName={`grid-cols-${gridCols}`}
-          >
-            {({node: product, index}) => (
+          <div className={`grid-cols-${gridCols}`}>
+            {sortedProducts.map((product, index) => (
               <ProductItem
                 key={product.id}
                 product={product}
-                loading={index < 8 ? 'eager' : 'lazy'}
+                loading={index < 6 ? 'eager' : 'lazy'}
               />
-            )}
-          </PaginatedResourceSection>
+            ))}
+          </div>
+
+          {sortedProducts.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#666' }}>
+              <h3>No products match your selected filters.</h3>
+              <button
+                className="glamor-btn-outline"
+                style={{ marginTop: '1rem' }}
+                onClick={() => { setInStockOnly(false); setOnSaleOnly(false); setSelectedSize(''); setSortBy('featured'); }}
+              >
+                RESET ALL FILTERS
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      <Analytics.CollectionView
+        data={{
+          collection: {
+            id: 'all-products',
+            handle: 'all',
+          },
+        }}
+      />
     </div>
   );
 }
 
-const COLLECTION_ITEM_FRAGMENT = `#graphql
-  fragment MoneyCollectionItem on MoneyV2 {
-    amount
-    currencyCode
-  }
-  fragment CollectionItem on Product {
-    id
-    handle
-    title
-    featuredImage {
-      id
-      altText
-      url
-      width
-      height
-    }
-    images(first: 2) {
-      nodes {
-        id
-        url
-        altText
-        width
-        height
-      }
-    }
-    priceRange {
-      minVariantPrice {
-        ...MoneyCollectionItem
-      }
-      maxVariantPrice {
-        ...MoneyCollectionItem
-      }
-    }
-    variants(first: 10) {
-      nodes {
-        id
-        title
-        availableForSale
-        price {
-          ...MoneyCollectionItem
-        }
-        compareAtPrice {
-          ...MoneyCollectionItem
-        }
-      }
-    }
-  }
-`;
-
-const CATALOG_QUERY = `#graphql
-  query Catalog(
+const ALL_PRODUCTS_QUERY = `#graphql
+  query AllProducts(
     $country: CountryCode
     $language: LanguageCode
     $first: Int
@@ -274,17 +488,64 @@ const CATALOG_QUERY = `#graphql
     $startCursor: String
     $endCursor: String
   ) @inContext(country: $country, language: $language) {
-    products(first: $first, last: $last, before: $startCursor, after: $endCursor) {
+    products(
+      first: $first,
+      last: $last,
+      before: $startCursor,
+      after: $endCursor
+    ) {
       nodes {
-        ...CollectionItem
-      }
-      pageInfo {
-        hasPreviousPage
-        hasNextPage
-        startCursor
-        endCursor
+        id
+        title
+        handle
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+        compareAtPriceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+        featuredImage {
+          id
+          url
+          altText
+          width
+          height
+        }
+        images(first: 2) {
+          nodes {
+            id
+            url
+            altText
+            width
+            height
+          }
+        }
+        variants(first: 10) {
+          nodes {
+            id
+            title
+            availableForSale
+            price {
+              amount
+              currencyCode
+            }
+            compareAtPrice {
+              amount
+              currencyCode
+            }
+            selectedOptions {
+              name
+              value
+            }
+          }
+        }
       }
     }
   }
-  ${COLLECTION_ITEM_FRAGMENT}
 `;

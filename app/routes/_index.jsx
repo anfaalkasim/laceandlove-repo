@@ -25,8 +25,6 @@ async function loadCriticalData({context}) {
 
   return {
     heroImage: collectionsData.shop?.brand?.coverImage?.image || null,
-    brasCollection: collectionsData.bras,
-    pantiesCollection: collectionsData.panties,
     collections: collectionsData.collections?.nodes || [],
   };
 }
@@ -47,56 +45,31 @@ function loadDeferredData({context}) {
 export default function Homepage() {
   /** @type {LoaderReturnData} */
   const data = useLoaderData();
+  const liveCollections = data.collections || [];
 
-  // Circle Category Bubbles with local HD Imagery
-  const categoryBubbles = [
-    { title: 'Bras', handle: 'bras', img: '/images/product-09.jpg' },
-    { title: 'Panties', handle: 'panties', img: '/images/product-03.jpg' },
-    { title: 'Sets', handle: 'lingerie-sets', img: '/images/product-10.jpg' },
-    { title: 'Sleepwear', handle: 'sleepwear', img: '/images/product-15.jpg' },
-    { title: 'Swimwear', handle: 'swimwear', img: '/images/product-11.jpg' },
-    { title: 'Shapewear', handle: 'shapewear', img: '/images/product-12.jpg' },
+  // Default fallback collections if store is not populated yet
+  const defaultCategories = [
+    { title: 'Bras & Bralettes', handle: 'bras', img: '/images/product-09.jpg' },
+    { title: 'Bikini & Panties', handle: 'panties', img: '/images/product-03.jpg' },
+    { title: 'Bikini Collection', handle: 'bikini', img: '/images/product-10.jpg' },
+    { title: 'Hipster Briefs', handle: 'hipster', img: '/images/product-15.jpg' },
+    { title: 'Luxury Swimwear', handle: 'swimwear', img: '/images/product-11.jpg' },
+    { title: 'Contours & Shapewear', handle: 'shapewear', img: '/images/product-12.jpg' },
   ];
 
-  // Full 6 Local High-Resolution Category Cards
-  const categories = [
-    {
-      title: 'Bras & Bralettes',
-      handle: 'bras',
-      img: '/images/product-09.jpg',
-      itemCount: '42 Items',
-    },
-    {
-      title: 'Bikini & Panties',
-      handle: 'panties',
-      img: '/images/product-03.jpg',
-      itemCount: '38 Items',
-    },
-    {
-      title: 'Lingerie Sets',
-      handle: 'lingerie-sets',
-      img: '/images/product-10.jpg',
-      itemCount: '24 Items',
-    },
-    {
-      title: 'Sleepwear & Slips',
-      handle: 'sleepwear',
-      img: '/images/product-15.jpg',
-      itemCount: '18 Items',
-    },
-    {
-      title: 'Luxury Swimwear',
-      handle: 'swimwear',
-      img: '/images/product-11.jpg',
-      itemCount: '29 Items',
-    },
-    {
-      title: 'Contours & Shapewear',
-      handle: 'shapewear',
-      img: '/images/product-12.jpg',
-      itemCount: '15 Items',
-    },
-  ];
+  // Dynamic mapping over live Shopify Collections
+  const categoriesToRender = liveCollections.length > 0
+    ? liveCollections.map((col, index) => {
+        const count = col.products?.nodes?.length || 0;
+        const fallback = defaultCategories[index % defaultCategories.length];
+        return {
+          title: col.title,
+          handle: col.handle,
+          img: col.image?.url || fallback.img,
+          itemCount: `${count} ${count === 1 ? 'Item' : 'Items'}`,
+        };
+      })
+    : defaultCategories.map(c => ({ ...c, itemCount: 'Explore Collection' }));
 
   const promoCards = [
     {
@@ -124,7 +97,7 @@ export default function Homepage() {
 
   return (
     <div className="glamor-home">
-      {/* Main Hero Banner (Layout 01) */}
+      {/* Main Hero Banner */}
       <section
         className="glamor-hero"
         style={{
@@ -143,10 +116,10 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Circle Category Bubbles Strip */}
+      {/* Circle Category Bubbles Strip (Dynamic from Shopify Collections) */}
       <div style={{ background: '#FAF9F6', padding: '2rem 0', borderBottom: '1px solid #eee' }}>
         <div className="page-container" style={{ display: 'flex', justifyContent: 'center', gap: '2.5rem', flexWrap: 'wrap' }}>
-          {categoryBubbles.map((bubble, i) => (
+          {categoriesToRender.map((bubble, i) => (
             <Link
               key={i}
               to={`/collections/${bubble.handle}`}
@@ -178,7 +151,7 @@ export default function Homepage() {
       </div>
 
       <div className="page-container">
-        {/* Shop by Category (6-Card Responsive Grid) */}
+        {/* Shop by Category Grid (100% Dynamic from Shopify Collections) */}
         <div style={{ textAlign: 'center', marginTop: '4rem', marginBottom: '1.5rem' }}>
           <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.25em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
             EXPLORE COLLECTIONS
@@ -194,7 +167,7 @@ export default function Homepage() {
             marginBottom: '5rem',
           }}
         >
-          {categories.map((cat, i) => (
+          {categoriesToRender.map((cat, i) => (
             <Link key={i} to={`/collections/${cat.handle}`} className="glamor-cat-card">
               <img src={cat.img} alt={cat.title} className="glamor-cat-img" />
               <div className="glamor-cat-overlay">
@@ -208,7 +181,7 @@ export default function Homepage() {
           ))}
         </div>
 
-        {/* Dual Image Brand Mission (Layout 01) */}
+        {/* Dual Image Brand Mission */}
         <section className="glamor-brand-story">
           <div className="glamor-dual-images">
             <img
@@ -236,7 +209,7 @@ export default function Homepage() {
           </div>
         </section>
 
-        {/* Fresh Styles Just Landed Section */}
+        {/* Fresh Styles Just Landed Section (Dynamic Live Products) */}
         <section style={{ margin: '5rem 0' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
@@ -258,7 +231,7 @@ export default function Homepage() {
           </Suspense>
         </section>
 
-        {/* High Impact Full-Width Photo Promo Banner */}
+        {/* Full-Width Photo Promo Banner */}
         <section
           style={{
             position: 'relative',
@@ -332,7 +305,7 @@ export default function Homepage() {
           ))}
         </section>
 
-        {/* Instagram / Lookbook Photo Grid Section */}
+        {/* Instagram / Lookbook Photo Grid */}
         <section style={{ marginBottom: '5rem', textAlign: 'center' }}>
           <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
             INSPIRE YOUR LOOK
@@ -368,13 +341,18 @@ const HOMEPAGE_COLLECTIONS_QUERY = `#graphql
         }
       }
     }
-    collections(first: 6) {
+    collections(first: 10) {
       nodes {
         id
         title
         handle
         image {
           url
+        }
+        products(first: 250) {
+          nodes {
+            id
+          }
         }
       }
     }
