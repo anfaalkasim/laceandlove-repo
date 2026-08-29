@@ -1,28 +1,34 @@
-import {useLoaderData} from 'react-router';
-import {useState, useRef} from 'react';
+import {useLoaderData, Link, Await} from 'react-router';
+import {useState, Suspense} from 'react';
 import {
   getSelectedProductOptions,
   Analytics,
   useOptimisticVariant,
-  getProductOptions,
   getAdjacentAndFirstAvailableVariants,
-  useSelectedOptionInUrlParam,
 } from '@shopify/hydrogen';
 import {ProductPrice} from '~/components/ProductPrice';
-import {ProductImage} from '~/components/ProductImage';
 import {ProductForm} from '~/components/ProductForm';
 import {ProductAccordions} from '~/components/ProductAccordions';
+import {ProductItem} from '~/components/ProductItem';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+
+// Fallback local image paths if a Shopify product has no uploaded images
+const PDP_FALLBACK_IMAGES = [
+  '/images/product-12.jpg',
+  '/images/product-12-hover.jpg',
+  '/images/product-09.jpg',
+  '/images/product-10.jpg',
+];
 
 /**
  * @type {Route.MetaFunction}
  */
 export const meta = ({data}) => {
   return [
-    {title: `Hydrogen | ${data?.product.title ?? ''}`},
+    {title: `Lace & Love | ${data?.product?.title ?? 'Product'}`},
     {
       rel: 'canonical',
-      href: `/products/${data?.product.handle}`,
+      href: `/products/${data?.product?.handle}`,
     },
   ];
 };
@@ -31,20 +37,11 @@ export const meta = ({data}) => {
  * @param {Route.LoaderArgs} args
  */
 export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
-
   return {...deferredData, ...criticalData};
 }
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
 async function loadCriticalData({context, params, request}) {
   const {handle} = params;
   const {storefront} = context;
@@ -57,14 +54,12 @@ async function loadCriticalData({context, params, request}) {
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
     }),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
   if (!product?.id) {
-    throw new Response(null, {status: 404});
+    throw new Response(`Product ${handle} not found`, {status: 404});
   }
 
-  // The API handle might be localized, so redirect to the localized handle
   redirectIfHandleIsLocalized(request, {handle, data: product});
 
   return {
@@ -72,230 +67,134 @@ async function loadCriticalData({context, params, request}) {
   };
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
-function loadDeferredData() {
-  // Put any API calls that is not critical to be available on first page render
-  // For example: product reviews, product recommendations, social feeds.
+function loadDeferredData({context}) {
+  const recommendedProducts = context.storefront
+    .query(RECOMMENDED_PRODUCTS_QUERY)
+    .catch((error) => {
+      console.error(error);
+      return null;
+    });
 
-  return {};
+  return {
+    recommendedProducts,
+  };
 }
 
 export default function Product() {
   /** @type {LoaderReturnData} */
-  const {product} = useLoaderData();
-  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
-  const sizeGuideRef = useRef(null);
+  const {product, recommendedProducts} = useLoaderData();
 
-  // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
     product.selectedOrFirstAvailableVariant,
     getAdjacentAndFirstAvailableVariants(product),
   );
 
-  // Sets the search param to the selected variant without navigation
-  // only when no search params are set in the url
-  useSelectedOptionInUrlParam(selectedVariant.selectedOptions);
+  const rawImages = product.images?.nodes || [];
+  const galleryImages = rawImages.length > 0 ? rawImages.map(img => img.url) : PDP_FALLBACK_IMAGES;
 
-  // Get the product options array
-  const productOptions = getProductOptions({
-    ...product,
-    selectedOrFirstAvailableVariant: selectedVariant,
-  });
-
-  const {title, descriptionHtml} = product;
-
-  // Helper to extract a human-readable name from a metafield (handles plain text & metaobject references)
-  const getMetafieldDisplayValue = (metafield) => {
-    if (!metafield) return null;
-    if (metafield.reference?.fields) {
-      const nameField = metafield.reference.fields.find(
-        (f) => f.key === 'name' || f.key === 'title' || f.key === 'label',
-      );
-      if (nameField) return nameField.value;
-      const firstValuedField = metafield.reference.fields.find((f) => f.value);
-      if (firstValuedField) return firstValuedField.value;
-      return metafield.reference.handle;
-    }
-    return metafield.value;
-  };
-
-  const braTypeValue = getMetafieldDisplayValue(product.bra_type);
-  const pantiesTypeValue = getMetafieldDisplayValue(product.panties_type);
-
-  // Get the selected variant's color
-  const selectedColor = selectedVariant?.selectedOptions?.find(
-    (opt) => opt.name.toLowerCase() === 'color'
-  )?.value;
-
-  // Find any variant of the same color that has gallery images populated
-  const variantWithImages = product.variants?.nodes?.find((variant) => {
-    const hasSameColor = variant.selectedOptions?.some(
-      (opt) => opt.name.toLowerCase() === 'color' && opt.value === selectedColor
-    );
-    const hasGalleryImages = variant.gallery_images?.references?.nodes?.length > 0;
-    return hasSameColor && hasGalleryImages;
-  });
-
-  // Extract the images from the metafield of that variant
-  const variantImages = variantWithImages?.gallery_images?.references?.nodes
-    ?.map((node) => node.image)
-    ?.filter(Boolean) || [];
-
-  // Fallback to the main product images if no variant has gallery images populated
-  const imagesToShow = variantImages.length > 0 ? variantImages : product.images?.nodes || [];
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const currentImageUrl = galleryImages[selectedImageIndex] || galleryImages[0];
 
   return (
-    <div className="product">
-      <ProductImage
-        key={selectedColor || 'default'}
-        selectedImage={selectedVariant?.image}
-        images={imagesToShow}
-      />
-      <div className="product-main">
-        {product.vendor && <div className="product-vendor">{product.vendor}</div>}
-        <h1>{title}</h1>
-        
-        <div className="product-status-row">
-          <span className={`status-pulse-dot ${!selectedVariant?.availableForSale ? 'low-stock' : ''}`} />
-          <span>
-            {selectedVariant?.availableForSale 
-              ? 'In stock - ready to dispatch' 
-              : 'Currently out of stock'}
-          </span>
-        </div>
-
-        <ProductPrice
-          price={selectedVariant?.price}
-          compareAtPrice={selectedVariant?.compareAtPrice}
-        />
-        
-        <ProductForm
-          productOptions={productOptions}
-          selectedVariant={selectedVariant}
-          onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
-          product={product}
-        />
-        
-        <ProductAccordions
-          descriptionHtml={descriptionHtml}
-          braType={braTypeValue}
-          pantiesType={pantiesTypeValue}
-        />
+    <div className="page-container" style={{ paddingTop: '2rem', paddingBottom: '5rem' }}>
+      {/* PDP Breadcrumb Banner */}
+      <div style={{ fontSize: '0.85rem', color: '#888', marginBottom: '2rem', textTransform: 'uppercase' }}>
+        <Link to="/">HOME</Link> &nbsp;/&nbsp; <Link to="/collections">SHOP</Link> &nbsp;/&nbsp; {product.title}
       </div>
 
-      {/* Sizing Guide Backdrop Modal */}
-      <div 
-        className={`modal-backdrop ${isSizeGuideOpen ? 'open' : ''}`} 
-        onClick={(e) => {
-          if (sizeGuideRef.current && !sizeGuideRef.current.contains(e.target)) {
-            setIsSizeGuideOpen(false);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            setIsSizeGuideOpen(false);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Close size guide"
-      >
-        <div 
-          ref={sizeGuideRef}
-          className="modal-window" 
-        >
-          <div className="modal-header">
-            <h3>Size Guide</h3>
-            <button type="button" className="modal-close-btn" onClick={() => setIsSizeGuideOpen(false)}>
-              &times;
-            </button>
+      {/* Main PDP Grid (Layout 04) */}
+      <div className="glamor-pdp-container">
+        {/* Left Side Gallery (Vertical Thumbnails + Main Image) */}
+        <div className="glamor-pdp-gallery">
+          <div className="glamor-pdp-thumbs">
+            {galleryImages.map((imgUrl, index) => (
+              <img
+                key={index}
+                src={imgUrl}
+                alt={`${product.title} view ${index + 1}`}
+                className={`glamor-thumb ${selectedImageIndex === index ? 'active' : ''}`}
+                onClick={() => setSelectedImageIndex(index)}
+              />
+            ))}
           </div>
-          <div className="modal-body">
-            <p>Use the chart below to find your perfect fit. If you are between sizes, we recommend choosing the larger size.</p>
-            
-            <h4>Bust & Underband (Bras)</h4>
-            <table className="size-table">
-              <thead>
-                <tr>
-                  <th>Size</th>
-                  <th>Underband (in)</th>
-                  <th>Bust (in)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>XS (30A-30B)</td>
-                  <td>26 - 28</td>
-                  <td>30 - 32</td>
-                </tr>
-                <tr>
-                  <td>S (32A-32C)</td>
-                  <td>28 - 30</td>
-                  <td>32 - 34</td>
-                </tr>
-                <tr>
-                  <td>M (34A-34C)</td>
-                  <td>30 - 32</td>
-                  <td>34 - 36</td>
-                </tr>
-                <tr>
-                  <td>L (36A-36D)</td>
-                  <td>32 - 34</td>
-                  <td>36 - 39</td>
-                </tr>
-                <tr>
-                  <td>XL (38B-38DD)</td>
-                  <td>34 - 36</td>
-                  <td>39 - 42</td>
-                </tr>
-              </tbody>
-            </table>
 
-            <h4>Waist & Hips (Panties & Sets)</h4>
-            <table className="size-table">
-              <thead>
-                <tr>
-                  <th>Size</th>
-                  <th>Waist (in)</th>
-                  <th>Hips (in)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>XS</td>
-                  <td>24 - 25</td>
-                  <td>34 - 35</td>
-                </tr>
-                <tr>
-                  <td>S</td>
-                  <td>26 - 27</td>
-                  <td>36 - 37</td>
-                </tr>
-                <tr>
-                  <td>M</td>
-                  <td>28 - 29</td>
-                  <td>38 - 39</td>
-                </tr>
-                <tr>
-                  <td>L</td>
-                  <td>30 - 32</td>
-                  <td>40 - 42</td>
-                </tr>
-                <tr>
-                  <td>XL</td>
-                  <td>33 - 35</td>
-                  <td>43 - 45</td>
-                </tr>
-              </tbody>
-            </table>
+          <div style={{ flex: 1 }}>
+            <img
+              src={currentImageUrl}
+              alt={product.title}
+              className="glamor-pdp-main-img"
+            />
+          </div>
+        </div>
+
+        {/* Right Side Product Info Panel */}
+        <div className="glamor-pdp-details">
+          <p className="glamor-pdp-brand">{product.vendor || 'LACE & LOVE LUXURY'}</p>
+          <h1 className="glamor-pdp-title">{product.title}</h1>
+
+          {/* Price Display */}
+          <div className="glamor-pdp-price">
+            <ProductPrice
+              price={selectedVariant?.price}
+              compareAtPrice={selectedVariant?.compareAtPrice}
+            />
+          </div>
+
+          {/* Stock Indicator Bar */}
+          <div
+            style={{
+              background: '#FAF9F6',
+              padding: '0.75rem 1rem',
+              borderRadius: '4px',
+              marginBottom: '1.5rem',
+              fontSize: '0.85rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>
+                {selectedVariant?.availableForSale ? '🔥 HURRY! ONLY A FEW LEFT IN STOCK' : 'OUT OF STOCK'}
+              </span>
+              <span style={{ color: '#666' }}>{selectedVariant?.availableForSale ? '85% Sold' : '0% Available'}</span>
+            </div>
+            <div style={{ height: '6px', background: '#eee', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ width: selectedVariant?.availableForSale ? '85%' : '0%', height: '100%', background: 'var(--color-accent)' }} />
+            </div>
+          </div>
+
+          {/* Integrated Product Form with Swatches, Quantity & Buttons */}
+          <ProductForm
+            productOptions={product.options}
+            selectedVariant={selectedVariant}
+            product={product}
+          />
+
+          <div style={{ marginTop: '2rem' }}>
+            <ProductAccordions product={product} />
           </div>
         </div>
       </div>
+
+      {/* Recommended / You May Also Like Section (Queried Live from Storefront) */}
+      <section style={{ marginTop: '5rem', paddingTop: '3rem', borderTop: '1px solid #eee' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
+            RECOMMENDED FOR YOU
+          </p>
+          <h2 style={{ fontSize: '2.25rem', fontWeight: 400, margin: 0 }}>You May Also Like</h2>
+        </div>
+
+        <Suspense fallback={<div>Loading recommendations...</div>}>
+          <Await resolve={recommendedProducts}>
+            {(response) => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '2rem' }}>
+                {(response?.products?.nodes || []).slice(0, 4).map((recommendedProd) => (
+                  <ProductItem key={recommendedProd.id} product={recommendedProd} />
+                ))}
+              </div>
+            )}
+          </Await>
+        </Suspense>
+      </section>
 
       <Analytics.ProductView
         data={{
@@ -318,12 +217,12 @@ export default function Product() {
 
 const PRODUCT_VARIANT_FRAGMENT = `#graphql
   fragment ProductVariant on ProductVariant {
+    id
     availableForSale
     compareAtPrice {
       amount
       currencyCode
     }
-    id
     image {
       __typename
       id
@@ -350,22 +249,6 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
       amount
       currencyCode
     }
-    gallery_images: metafield(namespace: "custom", key: "gallery_images") {
-      references(first: 10) {
-        nodes {
-          ... on MediaImage {
-            __typename
-            image {
-              id
-              url
-              altText
-              width
-              height
-            }
-          }
-        }
-      }
-    }
   }
 `;
 
@@ -377,22 +260,12 @@ const PRODUCT_FRAGMENT = `#graphql
     handle
     descriptionHtml
     description
-    encodedVariantExistence
-    encodedVariantAvailability
     options {
       name
       optionValues {
         name
         firstSelectableVariant {
           ...ProductVariant
-        }
-        swatch {
-          color
-          image {
-            previewImage {
-              url
-            }
-          }
         }
       }
     }
@@ -407,10 +280,6 @@ const PRODUCT_FRAGMENT = `#graphql
         ...ProductVariant
       }
     }
-    seo {
-      description
-      title
-    }
     images(first: 10) {
       nodes {
         id
@@ -418,32 +287,6 @@ const PRODUCT_FRAGMENT = `#graphql
         altText
         width
         height
-      }
-    }
-    bra_type: metafield(namespace: "custom", key: "bra_type") {
-      value
-      reference {
-        ... on Metaobject {
-          id
-          handle
-          fields {
-            key
-            value
-          }
-        }
-      }
-    }
-    panties_type: metafield(namespace: "custom", key: "panties_type") {
-      value
-      reference {
-        ... on Metaobject {
-          id
-          handle
-          fields {
-            key
-            value
-          }
-        }
       }
     }
   }
@@ -464,5 +307,36 @@ const PRODUCT_QUERY = `#graphql
   ${PRODUCT_FRAGMENT}
 `;
 
-/** @typedef {import('./+types/products.$handle').Route} Route */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
+const RECOMMENDED_PRODUCTS_QUERY = `#graphql
+  query RecommendedProductsPDP {
+    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
+      nodes {
+        id
+        title
+        handle
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+        featuredImage {
+          id
+          url
+          altText
+          width
+          height
+        }
+        images(first: 2) {
+          nodes {
+            id
+            url
+            altText
+            width
+            height
+          }
+        }
+      }
+    }
+  }
+`;

@@ -2,133 +2,127 @@ import {useState} from 'react';
 
 /**
  * @param {{
- *   descriptionHtml: string;
+ *   descriptionHtml?: string;
+ *   product?: any;
  *   braType?: string | null;
  *   pantiesType?: string | null;
  * }}
  */
-export function ProductAccordions({descriptionHtml, braType, pantiesType}) {
-  const [openIndex, setOpenIndex] = useState(0); // Default open first one (Description)
+export function ProductAccordions({descriptionHtml, product, braType, pantiesType}) {
+  const [openIndex, setOpenIndex] = useState(0);
 
   const toggleIndex = (index) => {
     setOpenIndex(openIndex === index ? -1 : index);
   };
 
-  const hasSpecs = braType || pantiesType;
+  const htmlContent = descriptionHtml || product?.descriptionHtml || (product?.description ? `<p>${product.description}</p>` : null) || `
+    <p>Handcrafted with ultra-soft stretch lace, delicate underwire support, and plush lining for everyday luxury and timeless elegance.</p>
+    <ul>
+      <li>Breathable non-scratch European lace</li>
+      <li>Adjustable silk-touch shoulder straps</li>
+      <li>Reinforced hook and eye closure</li>
+      <li>Contoured cups for natural shape and support</li>
+    </ul>
+  `;
 
   return (
-    <div className="product-accordions">
+    <div className="product-accordions" style={{ borderTop: '1px solid #eee', marginTop: '1.5rem' }}>
       {/* 1. Description Accordion */}
-      <div className={`accordion-item ${openIndex === 0 ? 'open' : ''}`}>
+      <div style={{ borderBottom: '1px solid #eee' }}>
         <button
           type="button"
-          className="accordion-header"
           onClick={() => toggleIndex(0)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            padding: '1rem 0',
+            background: 'none',
+            border: 'none',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            cursor: 'pointer',
+          }}
         >
           <span>Description</span>
-          <ChevronIcon />
+          <span>{openIndex === 0 ? '−' : '+'}</span>
         </button>
-        <div className="accordion-content">
-          <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        </div>
-      </div>
-
-      {/* 2. Details & Specs Accordion (if specs exist) */}
-      {hasSpecs && (
-        <div className={`accordion-item ${openIndex === 1 ? 'open' : ''}`}>
-          <button
-            type="button"
-            className="accordion-header"
-            onClick={() => toggleIndex(1)}
-          >
-            <span>Details & Specs</span>
-            <ChevronIcon />
-          </button>
-          <div className="accordion-content">
-            <table className="specs-table">
-              <tbody>
-                {braType && (
-                  <tr className="specs-row">
-                    <td className="specs-label">Bra Style</td>
-                    <td className="specs-value">{braType}</td>
-                  </tr>
-                )}
-                {pantiesType && (
-                  <tr className="specs-row">
-                    <td className="specs-label">Panties Style</td>
-                    <td className="specs-value">{pantiesType}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        {openIndex === 0 && (
+          <div style={{ paddingBottom: '1rem', color: '#555', fontSize: '0.9rem', lineHeight: '1.7' }}>
+            <div dangerouslySetInnerHTML={{__html: htmlContent}} />
           </div>
-        </div>
-      )}
-
-      {/* 3. Material & Care Accordion */}
-      <div className={`accordion-item ${openIndex === 2 ? 'open' : ''}`}>
-        <button
-          type="button"
-          className="accordion-header"
-          onClick={() => toggleIndex(2)}
-        >
-          <span>Material & Care</span>
-          <ChevronIcon />
-        </button>
-        <div className="accordion-content">
-          <p>
-            Lace & Love garments are made from selected premium fabrics, fine Italian lace, and delicate silk accents. To preserve their premium quality, we recommend:
-          </p>
-          <ul>
-            <li>Hand wash cold with a mild, delicate detergent.</li>
-            <li>Do not bleach, twist, or wring.</li>
-            <li>Lay flat to dry in shade. Do not tumble dry.</li>
-            <li>Iron on low heat if necessary, protecting delicate lace panels with a pressing cloth.</li>
-          </ul>
-        </div>
+        )}
       </div>
 
-      {/* 4. Shipping & Returns Accordion */}
-      <div className={`accordion-item ${openIndex === 3 ? 'open' : ''}`}>
+      {/* 2. Fabric & Material Care */}
+      <div style={{ borderBottom: '1px solid #eee' }}>
         <button
           type="button"
-          className="accordion-header"
-          onClick={() => toggleIndex(3)}
+          onClick={() => toggleIndex(1)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            padding: '1rem 0',
+            background: 'none',
+            border: 'none',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            cursor: 'pointer',
+          }}
+        >
+          <span>Fabric & Care</span>
+          <span>{openIndex === 1 ? '−' : '+'}</span>
+        </button>
+        {openIndex === 1 && (
+          <div style={{ paddingBottom: '1rem', color: '#555', fontSize: '0.9rem', lineHeight: '1.7' }}>
+            <p><strong>Composition:</strong> 85% Polyamide, 15% Elastane. Lining: 100% Breathable Cotton.</p>
+            <ul style={{ paddingLeft: '1.2rem', margin: '0.5rem 0' }}>
+              <li>Hand wash cold with delicate detergent.</li>
+              <li>Do not bleach or tumble dry.</li>
+              <li>Lay flat to dry in shade.</li>
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Shipping & Returns */}
+      <div style={{ borderBottom: '1px solid #eee' }}>
+        <button
+          type="button"
+          onClick={() => toggleIndex(2)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            justify: 'space-between',
+            alignItems: 'center',
+            padding: '1rem 0',
+            background: 'none',
+            border: 'none',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            cursor: 'pointer',
+          }}
         >
           <span>Shipping & Returns</span>
-          <ChevronIcon />
+          <span>{openIndex === 2 ? '−' : '+'}</span>
         </button>
-        <div className="accordion-content">
-          <p>
-            <strong>Complimentary standard shipping</strong> on all orders over $150.
-          </p>
-          <p>
-            Delivery times:
-          </p>
-          <ul>
-            <li>Standard delivery: 3–6 business days.</li>
-            <li>Express shipping: 1–3 business days.</li>
-          </ul>
-          <p>
-            We offer complimentary returns and exchanges within 30 days of delivery. Items must be returned in unworn, unwashed condition with all original tags and protective liners attached.
-          </p>
-        </div>
+        {openIndex === 2 && (
+          <div style={{ paddingBottom: '1rem', color: '#555', fontSize: '0.9rem', lineHeight: '1.7' }}>
+            <p><strong>Free Express Shipping</strong> on orders over $75.</p>
+            <p>All orders are delivered in unbranded, discreet luxury packaging.</p>
+            <p>Accepting returns on unworn items with tags within 30 days.</p>
+          </div>
+        )}
       </div>
     </div>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={2}
-      stroke="currentColor"
-      className="accordion-chevron"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-    </svg>
   );
 }

@@ -1,30 +1,33 @@
 import {useLoaderData, Link} from 'react-router';
-import {getPaginationVariables, Image} from '@shopify/hydrogen';
+import {getPaginationVariables} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+
+// Local Codezeel Glamor Demo category cover images
+const GLAMOR_CAT_IMAGES = [
+  '/images/product-09.jpg',
+  '/images/product-03.jpg',
+  '/images/product-10.jpg',
+  '/images/product-11.jpg',
+  '/images/product-12.jpg',
+  '/images/product-15.jpg',
+];
 
 /**
  * @type {Route.MetaFunction}
  */
 export const meta = () => {
-  return [{title: 'Lace & Love | Browse All Collections'}];
+  return [{title: 'Lace & Love | All Lingerie & Innerwear Collections'}];
 };
 
 /**
  * @param {Route.LoaderArgs} args
  */
 export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
-
   return {...deferredData, ...criticalData};
 }
 
-/**
- * Load data necessary for rendering content above the fold.
- */
 async function loadCriticalData({context, request}) {
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 12,
@@ -39,9 +42,6 @@ async function loadCriticalData({context, request}) {
   return {collections};
 }
 
-/**
- * Load data for rendering content below the fold.
- */
 function loadDeferredData() {
   return {};
 }
@@ -51,59 +51,63 @@ export default function Collections() {
   const {collections} = useLoaderData();
 
   return (
-    <div className="collections-container" style={{maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem'}}>
-      <h1 className="homepage-section-title" style={{marginBottom: '3rem'}}>All Collections</h1>
+    <div className="page-container" style={{ paddingTop: '2rem', paddingBottom: '5rem' }}>
+      {/* Glamor Header Banner */}
+      <div
+        style={{
+          position: 'relative',
+          backgroundImage: 'url("/images/hero-bg.jpg")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          padding: '4.5rem 2rem',
+          borderRadius: '8px',
+          marginBottom: '3.5rem',
+          textAlign: 'center',
+          color: '#fff',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <p style={{ fontSize: '0.8rem', color: '#e0e0e0', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>
+            <Link to="/" style={{ color: '#fff' }}>HOME</Link> &nbsp;/&nbsp; COLLECTIONS
+          </p>
+          <h1 style={{ fontSize: '2.75rem', fontWeight: 400, margin: 0, textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>Browse All Collections</h1>
+          <p style={{ color: '#f0f0f0', maxWidth: '600px', margin: '0.75rem auto 0', fontSize: '0.95rem' }}>
+            Discover our full spectrum of luxury bras, thongs, seamless panties, sleepwear, and shapewear.
+          </p>
+        </div>
+      </div>
+
+      {/* 3-Column Category Card Grid */}
       <PaginatedResourceSection
         connection={collections}
-        resourcesClassName="collections-grid"
+        resourcesClassName="glamor-cat-grid"
       >
-        {({node: collection, index}) => (
-          <CollectionItem
-            key={collection.id}
-            collection={collection}
-            index={index}
-          />
-        )}
+        {({node: collection, index}) => {
+          const fallbackImg = GLAMOR_CAT_IMAGES[index % GLAMOR_CAT_IMAGES.length];
+          const imgUrl = collection?.image?.url || fallbackImg;
+
+          return (
+            <Link
+              key={collection.id}
+              to={`/collections/${collection.handle}`}
+              className="glamor-cat-card"
+            >
+              <img src={imgUrl} alt={collection.title} className="glamor-cat-img" />
+              <div className="glamor-cat-overlay">
+                <h3 className="glamor-cat-title">{collection.title}</h3>
+                <span className="glamor-cat-btn">EXPLORE COLLECTION</span>
+              </div>
+            </Link>
+          );
+        }}
       </PaginatedResourceSection>
     </div>
   );
 }
 
-/**
- * @param {{
- *   collection: CollectionFragment;
- *   index: number;
- * }}
- */
-function CollectionItem({collection, index}) {
-  const image = collection?.image;
-  return (
-    <Link
-      className="collection-item"
-      key={collection.id}
-      to={`/collections/${collection.handle}`}
-      prefetch="intent"
-    >
-      {image ? (
-        <Image
-          alt={image.altText || collection.title}
-          aspectRatio="4/5"
-          data={image}
-          loading={index < 4 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 33vw, 100vw"
-        />
-      ) : (
-        <div style={{ background: 'linear-gradient(135deg, #2A1B54 0%, #120A2B 100%)', height: '100%', width: '100%' }} />
-      )}
-      <div className="collection-item-overlay">
-        <h3 className="collection-item-title">{collection.title}</h3>
-        <span className="collection-item-link">View Collection &rarr;</span>
-      </div>
-    </Link>
-  );
-}
-
-const COLLECTIONS_QUERY = `#graphql
+const COLLECTION_FRAGMENT = `#graphql
   fragment Collection on Collection {
     id
     title
@@ -116,13 +120,17 @@ const COLLECTIONS_QUERY = `#graphql
       height
     }
   }
-  query StoreCollections(
+`;
+
+const COLLECTIONS_QUERY = `#graphql
+  ${COLLECTION_FRAGMENT}
+  query Collections(
     $country: CountryCode
-    $endCursor: String
-    $first: Int
     $language: LanguageCode
+    $first: Int
     $last: Int
     $startCursor: String
+    $endCursor: String
   ) @inContext(country: $country, language: $language) {
     collections(
       first: $first,
@@ -134,15 +142,11 @@ const COLLECTIONS_QUERY = `#graphql
         ...Collection
       }
       pageInfo {
-        hasNextPage
         hasPreviousPage
+        hasNextPage
         startCursor
         endCursor
       }
     }
   }
 `;
-
-/** @typedef {import('./+types/collections._index').Route} Route */
-/** @typedef {import('storefrontapi.generated').CollectionFragment} CollectionFragment */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

@@ -29,6 +29,7 @@ export function AddToCartButton({
             type="submit"
             onClick={onClick}
             disabled={disabled ?? fetcher.state !== 'idle'}
+            className="glamor-btn-primary add-to-cart-btn"
           >
             {children}
           </button>

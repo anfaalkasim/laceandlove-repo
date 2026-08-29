@@ -8,6 +8,7 @@ import {useAside} from './Aside';
  *   productOptions: MappedProductOptions[];
  *   selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
  *   onOpenSizeGuide?: () => void;
+ *   product?: any;
  * }}
  */
 export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, product}) {
@@ -30,31 +31,32 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
 *Price:* ${variantPrice}
 *Link:* ${productUrl}`;
   
-  // Replace with the desired WhatsApp phone number (with country code, no +, spaces, or dashes)
-  const whatsappNumber = '916238171416'; // Placeholder
+  const whatsappNumber = '916238171416';
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
-    <div className="product-form">
+    <div className="product-form" style={{ width: '100%' }}>
       {productOptions.map((option) => {
-        // If there is only a single value in the option values, don't display the option
         if (option.optionValues.length === 1) return null;
 
         return (
-          <div className="product-options" key={option.name}>
-            <h5>
-              {option.name}
+          <div className="product-options" key={option.name} style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h5 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                {option.name}
+              </h5>
               {option.name.toLowerCase() === 'size' && onOpenSizeGuide && (
                 <button
                   type="button"
-                  className="size-guide-link"
+                  style={{ background: 'none', border: 'none', textDecoration: 'underline', fontSize: '0.8rem', cursor: 'pointer' }}
                   onClick={onOpenSizeGuide}
                 >
                   Size Guide
                 </button>
               )}
-            </h5>
-            <div className="product-options-grid">
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {option.optionValues.map((value) => {
                 const {
                   name,
@@ -68,40 +70,25 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
                 } = value;
 
                 const isSwatch = !!(swatch?.color || swatch?.image?.previewImage?.url || option.name.toLowerCase() === 'color' || option.name.toLowerCase() === 'colour');
-                const baseClass = isSwatch ? 'product-options-item' : 'product-options-item-text';
-                const className = `${baseClass}${selected ? ' selected' : ''}${!available ? ' disabled' : ''}`;
 
                 if (isDifferentProduct) {
-                  // SEO
-                  // When the variant is a combined listing child product
-                  // that leads to a different url, we need to render it
-                  // as an anchor tag
                   return (
                     <Link
-                      className={className}
+                      className={`glamor-size-chip ${selected ? 'selected' : ''}`}
                       key={option.name + name}
                       prefetch="intent"
                       preventScrollReset
                       replace
                       to={`/products/${handle}?${variantUriQuery}`}
                     >
-                      {isSwatch ? (
-                        <ProductOptionSwatch swatch={swatch} name={name} />
-                      ) : (
-                        name
-                      )}
+                      {name}
                     </Link>
                   );
                 } else {
-                  // SEO
-                  // When the variant is an update to the search param,
-                  // render it as a button with javascript navigating to
-                  // the variant so that SEO bots do not index these as
-                  // duplicated links
                   return (
                     <button
                       type="button"
-                      className={className}
+                      className={`glamor-size-chip ${selected ? 'selected' : ''}`}
                       key={option.name + name}
                       disabled={!exists}
                       onClick={() => {
@@ -113,167 +100,96 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
                         }
                       }}
                     >
-                      {isSwatch ? (
-                        <ProductOptionSwatch swatch={swatch} name={name} />
-                      ) : (
-                        name
-                      )}
+                      {name}
                     </button>
                   );
                 }
               })}
             </div>
-            <br />
           </div>
         );
       })}
 
-      <div className="product-quantity">
-        <span className="product-quantity-label">Quantity</span>
-        <div className="quantity-selector">
-          <button
-            type="button"
-            className="quantity-btn"
-            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            disabled={quantity <= 1}
+      {/* Quantity Stepper & Add to Cart Button Block */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              border: '1px solid #ddd',
+              borderRadius: '30px',
+              padding: '2px 8px',
+              background: '#fff',
+            }}
           >
-            &minus;
-          </button>
-          <span className="quantity-value">{quantity}</span>
-          <button
-            type="button"
-            className="quantity-btn"
-            onClick={() => setQuantity((q) => q + 1)}
-          >
-            &#43;
-          </button>
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0.6rem 0.8rem',
+                fontSize: '1.1rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              &minus;
+            </button>
+            <span style={{ padding: '0 0.8rem', fontWeight: 700, fontSize: '0.95rem' }}>{quantity}</span>
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => q + 1)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0.6rem 0.8rem',
+                fontSize: '1.1rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              &#43;
+            </button>
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <AddToCartButton
+              disabled={!selectedVariant || !selectedVariant.availableForSale}
+              lines={
+                selectedVariant
+                  ? [
+                      {
+                        merchandiseId: selectedVariant.id,
+                        quantity,
+                        selectedVariant,
+                      },
+                    ]
+                  : []
+              }
+            >
+              {selectedVariant?.availableForSale ? 'ADD TO CART' : 'SOLD OUT'}
+            </AddToCartButton>
+          </div>
         </div>
+
+        {selectedVariant?.availableForSale && (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="whatsapp-order-btn"
+          >
+            <WhatsAppIcon />
+            <span>ORDER ON WHATSAPP</span>
+          </a>
+        )}
       </div>
-
-      <AddToCartButton
-        disabled={!selectedVariant || !selectedVariant.availableForSale}
-        lines={
-          selectedVariant
-            ? [
-                {
-                  merchandiseId: selectedVariant.id,
-                  quantity,
-                  selectedVariant,
-                },
-              ]
-            : []
-        }
-      >
-        {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
-      </AddToCartButton>
-
-      {selectedVariant?.availableForSale && (
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="whatsapp-order-btn"
-        >
-          <WhatsAppIcon />
-          <span>Order on WhatsApp</span>
-        </a>
-      )}
     </div>
   );
 }
-
-const COLOR_MAP = {
-  black: '#1a1a1a',
-  white: '#ffffff',
-  beige: '#e8d3b9',
-  blue: '#2c75d3',
-  red: '#a93226',
-  green: '#1e8449',
-  yellow: '#f4d03f',
-  pink: '#f5b7b1',
-  purple: '#6c3483',
-  grey: '#7f8c8d',
-  gray: '#7f8c8d',
-  brown: '#873600',
-  orange: '#e67e22',
-  navy: '#1b263b',
-  cream: '#fdfd96',
-  ivory: '#fffff0',
-  lavender: '#d7bde2',
-  peach: '#f5cba7',
-  nude: '#e5c290',
-  champagne: '#f7e7ce',
-  teal: '#117a65',
-  coral: '#ec7063',
-  plum: '#7d3c98',
-  lilac: '#ebdef0',
-  mint: '#d4efdf',
-  charcoal: '#2c3e50',
-  burgundy: '#641e16',
-  maroon: '#78281f',
-  gold: '#d4af37',
-  silver: '#bdc3c7',
-  bronze: '#cd7f32',
-  copper: '#b87333',
-  olive: '#7d6608',
-  khaki: '#f0e68c',
-  mustard: '#d4ac0d',
-  camel: '#c19a6b',
-  rust: '#ba4a00',
-  sand: '#f5f5dc',
-  tan: '#d2b48c',
-  taupe: '#7b7d7d',
-  terracotta: '#d35400',
-  turquoise: '#138d75',
-  violet: '#a569bd',
-  wine: '#5b2c6f',
-};
-
-/**
- * @param {{
- *   swatch?: Maybe<ProductOptionValueSwatch> | undefined;
- *   name: string;
- * }}
- */
-function ProductOptionSwatch({swatch, name}) {
-  const image = swatch?.image?.previewImage?.url;
-  let color = swatch?.color;
-
-  if (!image && !color) {
-    const normalized = name.toLowerCase().trim();
-    if (COLOR_MAP[normalized]) {
-      color = COLOR_MAP[normalized];
-    } else {
-      const words = normalized.split(/\s+/);
-      for (const word of words) {
-        if (COLOR_MAP[word]) {
-          color = COLOR_MAP[word];
-          break;
-        }
-      }
-    }
-    if (!color) {
-      color = '#e0e0e0';
-    }
-  }
-
-  return (
-    <div
-      aria-label={name}
-      className="product-option-label-swatch"
-      style={{
-        backgroundColor: color || 'transparent',
-      }}
-    >
-      {!!image && <img src={image} alt={name} />}
-    </div>
-  );
-}
-
-/** @typedef {import('@shopify/hydrogen').MappedProductOptions} MappedProductOptions */
-/** @typedef {import('@shopify/hydrogen/storefront-api-types').Maybe} Maybe */
-/** @typedef {import('@shopify/hydrogen/storefront-api-types').ProductOptionValueSwatch} ProductOptionValueSwatch */
-/** @typedef {import('storefrontapi.generated').ProductFragment} ProductFragment */
 
 function WhatsAppIcon() {
   return (
@@ -282,3 +198,6 @@ function WhatsAppIcon() {
     </svg>
   );
 }
+
+/** @typedef {import('@shopify/hydrogen').MappedProductOptions} MappedProductOptions */
+/** @typedef {import('storefrontapi.generated').ProductFragment} ProductFragment */
