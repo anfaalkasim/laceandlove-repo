@@ -147,7 +147,7 @@ async function loadCriticalData({context, request, params}) {
       variables: { handle },
     });
     page = res?.page;
-  } catch (err) {
+  } catch {
     page = null;
   }
 

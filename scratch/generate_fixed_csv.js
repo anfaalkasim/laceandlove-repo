@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -384,3 +385,5 @@ const csvContent = rows.join("\n");
 const destPath = path.join(__dirname, '../public/shopify_demo_products.csv');
 fs.writeFileSync(destPath, csvContent, 'utf8');
 console.log('Fixed CSV generated at public/shopify_demo_products.csv');
+
+/* eslint-enable no-console */

@@ -5,7 +5,7 @@ import {useAside} from '~/components/Aside';
 /**
  * @param {HeaderProps}
  */
-export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
+export function Header({header, cart}) {
   const {open} = useAside();
   const shopName = header?.shop?.name || 'LACE & LOVE';
 
@@ -106,14 +106,14 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}) {
 /**
  * Mobile drawer header menu compatibility
  */
-export function HeaderMenu({menu, viewport}) {
+export function HeaderMenu({menu}) {
   const {close} = useAside();
   const menuItems = menu?.items || [];
 
   return (
-    <nav className="mobile-nav" onClick={close} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem 0' }}>
-      <NavLink to="/" end className="glamor-nav-link">HOME</NavLink>
-      <NavLink to="/collections" className="glamor-nav-link">SHOP ALL</NavLink>
+    <nav className="mobile-nav" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem 0' }}>
+      <NavLink to="/" end className="glamor-nav-link" onClick={close}>HOME</NavLink>
+      <NavLink to="/collections" className="glamor-nav-link" onClick={close}>SHOP ALL</NavLink>
       {menuItems.length > 0 ? (
         menuItems.map((item) => {
           const url = item.url.includes('myshopify.com') || item.url.startsWith('http')
@@ -121,17 +121,17 @@ export function HeaderMenu({menu, viewport}) {
             : item.url;
           if (url === '/' || url === '/collections') return null;
           return (
-            <NavLink key={item.id} to={url} className="glamor-nav-link">
+            <NavLink key={item.id} to={url} className="glamor-nav-link" onClick={close}>
               {item.title.toUpperCase()}
             </NavLink>
           );
         })
       ) : (
         <>
-          <NavLink to="/collections/bras" className="glamor-nav-link">BRAS</NavLink>
-          <NavLink to="/collections/panties" className="glamor-nav-link">PANTIES</NavLink>
-          <NavLink to="/collections/bikini" className="glamor-nav-link">BIKINI</NavLink>
-          <NavLink to="/collections/hipster" className="glamor-nav-link">HIPSTER</NavLink>
+          <NavLink to="/collections/bras" className="glamor-nav-link" onClick={close}>BRAS</NavLink>
+          <NavLink to="/collections/panties" className="glamor-nav-link" onClick={close}>PANTIES</NavLink>
+          <NavLink to="/collections/bikini" className="glamor-nav-link" onClick={close}>BIKINI</NavLink>
+          <NavLink to="/collections/hipster" className="glamor-nav-link" onClick={close}>HIPSTER</NavLink>
         </>
       )}
     </nav>

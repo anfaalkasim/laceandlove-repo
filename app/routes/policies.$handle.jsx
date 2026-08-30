@@ -78,7 +78,7 @@ export async function loader({params, context}) {
       },
     });
     policy = data?.shop?.[policyName];
-  } catch (err) {
+  } catch {
     policy = null;
   }
 

@@ -20,13 +20,11 @@ export function Footer() {
         </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem' }}>
           {FOOTER_LOOKBOOK_IMAGES.map((imgUrl, i) => (
-            <div key={i} style={{ aspectRatio: '1/1', overflow: 'hidden', borderRadius: '4px', position: 'relative' }}>
+            <div key={imgUrl} style={{ aspectRatio: '1/1', overflow: 'hidden', borderRadius: '4px', position: 'relative' }}>
               <img
                 src={imgUrl}
                 alt={`Instagram look ${i + 1}`}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
-                onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
+                className="glamor-lookbook-img"
               />
             </div>
           ))}

@@ -177,7 +177,7 @@ export async function createHydrogenRouterContext(
               }
             }
           }
-        } catch (metafieldError) {
+        } catch {
           // Fall back to local cookie mappings if Shopify metafield fails
           const cookieHeader = request.headers.get('Cookie');
           const cleanId = btoa(customerId).replace(/=/g, '');
@@ -190,7 +190,7 @@ export async function createHydrogenRouterContext(
           }
         }
       }
-    } catch (error) {
+    } catch {
       // Ignore login-query errors
     }
   } else {

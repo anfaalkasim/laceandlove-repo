@@ -235,7 +235,7 @@ async function loadCriticalData({context, params, request}) {
     ]);
     collection = res[0]?.collection;
     collectionsData = res[1];
-  } catch (e) {
+  } catch {
     collection = null;
   }
 

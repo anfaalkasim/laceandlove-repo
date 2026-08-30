@@ -1,7 +1,6 @@
 import {Link, useNavigate} from 'react-router';
 import {useState} from 'react';
 import {AddToCartButton} from './AddToCartButton';
-import {useAside} from './Aside';
 
 /**
  * @param {{
@@ -13,7 +12,6 @@ import {useAside} from './Aside';
  */
 export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, product}) {
   const navigate = useNavigate();
-  const {open} = useAside();
   const [quantity, setQuantity] = useState(1);
 
   const productTitle = product?.title || selectedVariant?.product?.title || '';
@@ -63,13 +61,9 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
                   handle,
                   variantUriQuery,
                   selected,
-                  available,
                   exists,
                   isDifferentProduct,
-                  swatch,
                 } = value;
-
-                const isSwatch = !!(swatch?.color || swatch?.image?.previewImage?.url || option.name.toLowerCase() === 'color' || option.name.toLowerCase() === 'colour');
 
                 if (isDifferentProduct) {
                   return (

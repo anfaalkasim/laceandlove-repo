@@ -313,13 +313,11 @@ export default function Homepage() {
           <h2 style={{ fontSize: '2.5rem', fontWeight: 400, marginBottom: '2rem' }}>Follow Us On Instagram</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem' }}>
             {instagramImages.map((imgUrl, i) => (
-              <div key={i} style={{ aspectRatio: '3/4', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
+              <div key={imgUrl} style={{ aspectRatio: '3/4', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
                 <img
                   src={imgUrl}
-                  alt={`Lookbook photo ${i + 1}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
-                  onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-                  onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
+                  alt={`Lookbook ${i + 1}`}
+                  className="glamor-instagram-img"
                 />
               </div>
             ))}

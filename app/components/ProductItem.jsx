@@ -157,9 +157,10 @@ export function ProductItem({product, loading}) {
 
       {/* Dynamic Swatches Section under Product Card */}
       <div className="glamor-swatches" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0.6rem 0' }}>
-        {swatches.map((swatch, i) => (
-          <span
-            key={i}
+        {swatches.map((swatch) => (
+          <button
+            key={swatch.name}
+            type="button"
             title={swatch.name}
             onClick={() => setActiveSwatch(swatch.name)}
             className={`glamor-swatch-dot ${activeSwatch === swatch.name ? 'active' : ''}`}
@@ -173,6 +174,8 @@ export function ProductItem({product, loading}) {
               border: activeSwatch === swatch.name ? '2px solid #121212' : '1px solid rgba(0,0,0,0.15)',
               transform: activeSwatch === swatch.name ? 'scale(1.25)' : 'scale(1.0)',
               transition: 'all 0.2s ease',
+              padding: 0,
+              outline: 'none',
             }}
           />
         ))}

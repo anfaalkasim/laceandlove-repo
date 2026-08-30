@@ -8,7 +8,7 @@ import {useState} from 'react';
  *   pantiesType?: string | null;
  * }}
  */
-export function ProductAccordions({descriptionHtml, product, braType, pantiesType}) {
+export function ProductAccordions({descriptionHtml, product}) {
   const [openIndex, setOpenIndex] = useState(0);
 
   const toggleIndex = (index) => {

@@ -220,7 +220,7 @@ async function loadCriticalData({context, request}) {
       variables: paginationVariables,
     });
     products = res?.products;
-  } catch (e) {
+  } catch {
     products = null;
   }
 

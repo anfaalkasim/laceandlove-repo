@@ -108,13 +108,24 @@ export default function Product() {
         <div className="glamor-pdp-gallery">
           <div className="glamor-pdp-thumbs">
             {galleryImages.map((imgUrl, index) => (
-              <img
-                key={index}
-                src={imgUrl}
-                alt={`${product.title} view ${index + 1}`}
+              <button
+                key={imgUrl}
+                type="button"
                 className={`glamor-thumb ${selectedImageIndex === index ? 'active' : ''}`}
                 onClick={() => setSelectedImageIndex(index)}
-              />
+                style={{
+                  background: 'none',
+                  padding: 0,
+                  display: 'block',
+                  outline: 'none',
+                }}
+              >
+                <img
+                  src={imgUrl}
+                  alt={`${product.title} view ${index + 1}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '2px', display: 'block' }}
+                />
+              </button>
             ))}
           </div>
 
