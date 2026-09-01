@@ -1,4 +1,4 @@
-import {useLoaderData, data} from 'react-router';
+import {useLoaderData, data, Link} from 'react-router';
 import {CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
 
@@ -6,7 +6,7 @@ import {CartMain} from '~/components/CartMain';
  * @type {Route.MetaFunction}
  */
 export const meta = () => {
-  return [{title: `Hydrogen | Cart`}];
+  return [{title: `Lace & Love | Shopping Bag`}];
 };
 
 /**
@@ -112,17 +112,30 @@ export default function Cart() {
   const cart = useLoaderData();
 
   return (
-    <div className="cart-layout-page">
-      <h1 style={{
-        fontFamily: "'Cormorant Garamond', serif",
-        fontSize: '2.75rem',
-        fontWeight: 500,
-        color: 'var(--color-dark)',
-        marginBottom: '2rem',
-        textAlign: 'left'
-      }}>
-        Shopping Bag
-      </h1>
+    <div className="page-container" style={{ paddingTop: '2rem', paddingBottom: '5rem' }}>
+      {/* Breadcrumbs */}
+      <div style={{ fontSize: '0.85rem', color: '#888', marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <Link to="/">HOME</Link> &nbsp;/&nbsp; <Link to="/collections">SHOP</Link> &nbsp;/&nbsp; SHOPPING BAG
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '2.5rem', borderBottom: '1px solid var(--border-muted)', paddingBottom: '1.25rem' }}>
+        <h1 style={{
+          fontFamily: 'var(--font-heading)',
+          fontSize: '2.5rem',
+          fontWeight: 400,
+          color: 'var(--color-dark)',
+          margin: 0,
+          letterSpacing: '0.02em',
+        }}>
+          Shopping Bag
+        </h1>
+        {cart?.totalQuantity > 0 && (
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            {cart.totalQuantity} {cart.totalQuantity === 1 ? 'item' : 'items'}
+          </span>
+        )}
+      </div>
+
       <CartMain layout="page" cart={cart} />
     </div>
   );
