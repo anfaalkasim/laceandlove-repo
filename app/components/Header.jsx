@@ -83,7 +83,7 @@ export function Header({header, cart}) {
             </svg>
           </Link>
 
-          <button className="glamor-icon-btn" onClick={() => open('cart')} aria-label="Cart">
+          <Link to="/cart" className="glamor-icon-btn" aria-label="Cart">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
               <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -96,7 +96,7 @@ export function Header({header, cart}) {
                 )}
               </Await>
             </Suspense>
-          </button>
+          </Link>
         </div>
       </div>
     </header>
