@@ -56,16 +56,15 @@ export async function createHydrogenRouterContext(
 
           if (customerId) {
             const cleanId = btoa(customerId).replace(/=/g, '');
+            // Only retrieve the cart belonging to THIS specific customer
             cartId =
-              session.get('loggedInCustomerCartId') ||
+              session.get(`customer_cart_${cleanId}`) ||
               getCookie(cookieHeader, `cart_${cleanId}`);
-            if (!cartId) {
-              cartId =
-                getCookie(cookieHeader, 'cart_guest') ||
-                getCookie(cookieHeader, 'cart');
-            }
+            // If this customer has no cart yet, return null so a fresh cart is created for them
           } else {
+            // Guest cart retrieval
             cartId =
+              session.get('guest_cart_id') ||
               getCookie(cookieHeader, 'cart_guest') ||
               getCookie(cookieHeader, 'cart');
           }
@@ -82,10 +81,7 @@ export async function createHydrogenRouterContext(
         setId(cartId) {
           const customerId = session.get('loggedInCustomerId');
           const headers = new Headers();
-          headers.append(
-            'Set-Cookie',
-            `cart=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
-          );
+
           if (customerId) {
             const cleanId = btoa(customerId).replace(/=/g, '');
             headers.append(
@@ -93,9 +89,10 @@ export async function createHydrogenRouterContext(
               `cart_${cleanId}=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
             );
 
-            const cachedCartId = session.get('loggedInCustomerCartId');
+            const sessionKey = `customer_cart_${cleanId}`;
+            const cachedCartId = session.get(sessionKey);
             if (cachedCartId !== cartId) {
-              session.set('loggedInCustomerCartId', cartId);
+              session.set(sessionKey, cartId);
               saveCartIdToShopify(
                 customerAccountRef.current,
                 customerId,
@@ -104,6 +101,11 @@ export async function createHydrogenRouterContext(
               );
             }
           } else {
+            session.set('guest_cart_id', cartId);
+            headers.append(
+              'Set-Cookie',
+              `cart=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
+            );
             headers.append(
               'Set-Cookie',
               `cart_guest=${cartId}; path=/; Max-Age=31536000; SameSite=Lax`,
@@ -133,6 +135,8 @@ export async function createHydrogenRouterContext(
       `);
       if (data?.customer?.id) {
         const customerId = data.customer.id;
+        const cleanId = btoa(customerId).replace(/=/g, '');
+        const sessionKey = `customer_cart_${cleanId}`;
         session.set('loggedInCustomerId', customerId);
 
         // 2. Fetch customer cart metafield (defensively, to handle missing schema/fields)
@@ -148,45 +152,21 @@ export async function createHydrogenRouterContext(
           `);
           const shopifyCartId = metafieldData?.data?.customer?.cartId?.value;
           if (shopifyCartId) {
-            session.set('loggedInCustomerCartId', decodeURIComponent(shopifyCartId));
+            session.set(sessionKey, decodeURIComponent(shopifyCartId));
           } else {
             const cookieHeader = request.headers.get('Cookie');
-            const cleanId = btoa(customerId).replace(/=/g, '');
             const localCustomerCartId = getCookie(cookieHeader, `cart_${cleanId}`);
 
             if (localCustomerCartId) {
-              session.set('loggedInCustomerCartId', localCustomerCartId);
-              saveCartIdToShopify(
-                customerAccount,
-                customerId,
-                localCustomerCartId,
-                waitUntil,
-              );
-            } else {
-              const guestCartId =
-                getCookie(cookieHeader, 'cart_guest') ||
-                getCookie(cookieHeader, 'cart');
-              if (guestCartId) {
-                session.set('loggedInCustomerCartId', guestCartId);
-                saveCartIdToShopify(
-                  customerAccount,
-                  customerId,
-                  guestCartId,
-                  waitUntil,
-                );
-              }
+              session.set(sessionKey, localCustomerCartId);
             }
           }
         } catch {
-          // Fall back to local cookie mappings if Shopify metafield fails
+          // Fall back to customer's own local cookie if Shopify metafield fails
           const cookieHeader = request.headers.get('Cookie');
-          const cleanId = btoa(customerId).replace(/=/g, '');
-          const customerCartId =
-            getCookie(cookieHeader, `cart_${cleanId}`) ||
-            getCookie(cookieHeader, 'cart_guest') ||
-            getCookie(cookieHeader, 'cart');
-          if (customerCartId) {
-            session.set('loggedInCustomerCartId', customerCartId);
+          const localCustomerCartId = getCookie(cookieHeader, `cart_${cleanId}`);
+          if (localCustomerCartId) {
+            session.set(sessionKey, localCustomerCartId);
           }
         }
       }
