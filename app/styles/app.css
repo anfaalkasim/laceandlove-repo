@@ -2146,5 +2146,48 @@ img {
   }
 }
 
+/* ==========================================================================
+   Circular Color Swatches in Product Form
+   ========================================================================== */
+.product-color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  padding: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  outline: none;
+}
+
+.product-color-swatch .swatch-circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.product-color-swatch:hover:not(:disabled) {
+  transform: scale(1.12);
+}
+
+.product-color-swatch.selected {
+  border-color: #121212;
+  box-shadow: 0 0 0 1px #121212;
+}
+
+.product-color-swatch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
 
 

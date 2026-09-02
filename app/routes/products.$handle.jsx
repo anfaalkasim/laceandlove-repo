@@ -1,24 +1,17 @@
 import {useLoaderData, Link, Await} from 'react-router';
-import {useState, Suspense} from 'react';
+import {useState, useEffect, Suspense} from 'react';
 import {
   getSelectedProductOptions,
   Analytics,
   useOptimisticVariant,
   getAdjacentAndFirstAvailableVariants,
+  getProductOptions,
 } from '@shopify/hydrogen';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductForm} from '~/components/ProductForm';
 import {ProductAccordions} from '~/components/ProductAccordions';
 import {ProductItem} from '~/components/ProductItem';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
-
-// Fallback local image paths if a Shopify product has no uploaded images
-const PDP_FALLBACK_IMAGES = [
-  '/images/product-12.jpg',
-  '/images/product-12-hover.jpg',
-  '/images/product-09.jpg',
-  '/images/product-10.jpg',
-];
 
 /**
  * @type {Route.MetaFunction}
@@ -89,11 +82,42 @@ export default function Product() {
     getAdjacentAndFirstAvailableVariants(product),
   );
 
-  const rawImages = product.images?.nodes || [];
-  const galleryImages = rawImages.length > 0 ? rawImages.map(img => img.url) : PDP_FALLBACK_IMAGES;
+  // Get the selected variant's color option value
+  const selectedColor = selectedVariant?.selectedOptions?.find(
+    (opt) => opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'colour'
+  )?.value;
+
+  // Find any variant of the same color that has gallery images populated in custom.gallery_images
+  const variantWithImages = product.variants?.nodes?.find((variant) => {
+    const hasSameColor = variant.selectedOptions?.some(
+      (opt) => (opt.name.toLowerCase() === 'color' || opt.name.toLowerCase() === 'colour') && opt.value === selectedColor
+    );
+    const hasGalleryImages = variant.gallery_images?.references?.nodes?.length > 0;
+    return hasSameColor && hasGalleryImages;
+  });
+
+  // Extract the images from the metafield of that variant
+  const variantImages = variantWithImages?.gallery_images?.references?.nodes
+    ?.map((node) => node.image)
+    ?.filter(Boolean) || [];
+
+  // Fallback: If variant has its own image, or main product images (Shopify only)
+  const imagesToShow = variantImages.length > 0
+    ? variantImages
+    : (selectedVariant?.image
+        ? [selectedVariant.image]
+        : (product.images?.nodes?.length > 0 ? product.images.nodes : []));
+
+  const galleryImages = imagesToShow.map((img) => img.url).filter(Boolean);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const currentImageUrl = galleryImages[selectedImageIndex] || galleryImages[0];
+
+  // Reset selected image to first when selected color changes
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [selectedColor]);
+
+  const currentImageUrl = galleryImages[selectedImageIndex] || galleryImages[0] || '';
 
   return (
     <div className="page-container" style={{ paddingTop: '2rem', paddingBottom: '5rem' }}>
@@ -106,35 +130,43 @@ export default function Product() {
       <div className="glamor-pdp-container">
         {/* Left Side Gallery (Vertical Thumbnails + Main Image) */}
         <div className="glamor-pdp-gallery">
-          <div className="glamor-pdp-thumbs">
-            {galleryImages.map((imgUrl, index) => (
-              <button
-                key={imgUrl}
-                type="button"
-                className={`glamor-thumb ${selectedImageIndex === index ? 'active' : ''}`}
-                onClick={() => setSelectedImageIndex(index)}
-                style={{
-                  background: 'none',
-                  padding: 0,
-                  display: 'block',
-                  outline: 'none',
-                }}
-              >
-                <img
-                  src={imgUrl}
-                  alt={`${product.title} view ${index + 1}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '2px', display: 'block' }}
-                />
-              </button>
-            ))}
-          </div>
+          {galleryImages.length > 1 && (
+            <div className="glamor-pdp-thumbs">
+              {galleryImages.map((imgUrl, index) => (
+                <button
+                  key={imgUrl + index}
+                  type="button"
+                  className={`glamor-thumb ${selectedImageIndex === index ? 'active' : ''}`}
+                  onClick={() => setSelectedImageIndex(index)}
+                  style={{
+                    background: 'none',
+                    padding: 0,
+                    display: 'block',
+                    outline: 'none',
+                  }}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`${product.title} view ${index + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '2px', display: 'block' }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div style={{ flex: 1 }}>
-            <img
-              src={currentImageUrl}
-              alt={product.title}
-              className="glamor-pdp-main-img"
-            />
+          <div style={{ flex: 1, minHeight: '400px', background: '#f7f7f7', borderRadius: '4px', overflow: 'hidden' }}>
+            {currentImageUrl ? (
+              <img
+                src={currentImageUrl}
+                alt={product.title}
+                className="glamor-pdp-main-img"
+              />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '450px', color: '#888' }}>
+                No image available
+              </div>
+            )}
           </div>
         </div>
 
@@ -174,7 +206,10 @@ export default function Product() {
 
           {/* Integrated Product Form with Swatches, Quantity & Buttons */}
           <ProductForm
-            productOptions={product.options}
+            productOptions={getProductOptions({
+              ...product,
+              selectedOrFirstAvailableVariant: selectedVariant,
+            })}
             selectedVariant={selectedVariant}
             product={product}
           />
@@ -260,6 +295,22 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
       amount
       currencyCode
     }
+    gallery_images: metafield(namespace: "custom", key: "gallery_images") {
+      references(first: 20) {
+        nodes {
+          ... on MediaImage {
+            __typename
+            image {
+              id
+              url
+              altText
+              width
+              height
+            }
+          }
+        }
+      }
+    }
   }
 `;
 
@@ -271,12 +322,22 @@ const PRODUCT_FRAGMENT = `#graphql
     handle
     descriptionHtml
     description
+    encodedVariantExistence
+    encodedVariantAvailability
     options {
       name
       optionValues {
         name
         firstSelectableVariant {
           ...ProductVariant
+        }
+        swatch {
+          color
+          image {
+            previewImage {
+              url
+            }
+          }
         }
       }
     }

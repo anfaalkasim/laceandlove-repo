@@ -3,37 +3,7 @@ import {Link} from 'react-router';
 import {Money} from '@shopify/hydrogen';
 import {useVariantUrl} from '~/lib/variants';
 
-// High-resolution local Codezeel Glamor Demo image pairs (Primary & Hover)
-const DEMO_IMAGE_PAIRS = [
-  {
-    primary: '/images/product-09.jpg',
-    secondary: '/images/product-09-hover.jpg',
-  },
-  {
-    primary: '/images/product-10.jpg',
-    secondary: '/images/product-10-hover.jpg',
-  },
-  {
-    primary: '/images/product-11.jpg',
-    secondary: '/images/product-11-hover.jpg',
-  },
-  {
-    primary: '/images/product-12.jpg',
-    secondary: '/images/product-12-hover.jpg',
-  },
-  {
-    primary: '/images/product-15.jpg',
-    secondary: '/images/product-15-hover.jpg',
-  },
-  {
-    primary: '/images/product-03.jpg',
-    secondary: '/images/product-09-hover.jpg',
-  },
-  {
-    primary: '/images/product-19.jpg',
-    secondary: '/images/product-10-hover.jpg',
-  },
-];
+
 
 const COLOR_HEX_MAP = {
   black: '#121212',
@@ -95,16 +65,24 @@ function extractDynamicSwatches(product) {
  */
 export function ProductItem({product, loading}) {
   const variantUrl = useVariantUrl(product.handle);
-  
-  const hash = (product?.id || product?.handle || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const fallbackPair = DEMO_IMAGE_PAIRS[Math.abs(hash) % DEMO_IMAGE_PAIRS.length];
+  // If product-level featuredImage or images are not set, check variant gallery_images from Shopify
+  const variantWithGallery = product?.variants?.nodes?.find(
+    (v) => v.gallery_images?.references?.nodes?.length > 0
+  );
+  const variantGalleryImages = variantWithGallery?.gallery_images?.references?.nodes
+    ?.map((n) => n.image?.url)
+    ?.filter(Boolean) || [];
 
-  let rawPrimary = product?.featuredImage?.url;
-  let rawSecondary = product?.images?.nodes?.[1]?.url || product?.images?.nodes?.[0]?.url;
-
-  // Use local HD images if remote burst URL is slow/broken or null
-  const primaryUrl = (rawPrimary && !rawPrimary.includes('burst.shopifycdn.com')) ? rawPrimary : fallbackPair.primary;
-  const secondaryUrl = (rawSecondary && !rawSecondary.includes('burst.shopifycdn.com')) ? rawSecondary : fallbackPair.secondary;
+  const primaryUrl =
+    product?.featuredImage?.url ||
+    product?.images?.nodes?.[0]?.url ||
+    product?.variants?.nodes?.[0]?.image?.url ||
+    variantGalleryImages[0] ||
+    '';
+  const secondaryUrl =
+    product?.images?.nodes?.[1]?.url ||
+    variantGalleryImages[1] ||
+    primaryUrl;
 
   const compareAtPrice = product.compareAtPriceRange?.minVariantPrice || product.variants?.nodes?.[0]?.compareAtPrice || null;
   const price = product.priceRange?.minVariantPrice;
@@ -125,18 +103,28 @@ export function ProductItem({product, loading}) {
         )}
 
         <Link to={variantUrl} prefetch="intent">
-          <img
-            src={primaryUrl}
-            alt={product.title}
-            loading={loading}
-            className="glamor-product-img"
-          />
-          <img
-            src={secondaryUrl}
-            alt={`${product.title} hover`}
-            loading="lazy"
-            className="glamor-product-img-hover"
-          />
+          {primaryUrl ? (
+            <>
+              <img
+                src={primaryUrl}
+                alt={product.title}
+                loading={loading}
+                className="glamor-product-img"
+              />
+              {secondaryUrl && secondaryUrl !== primaryUrl && (
+                <img
+                  src={secondaryUrl}
+                  alt={`${product.title} hover`}
+                  loading="lazy"
+                  className="glamor-product-img-hover"
+                />
+              )}
+            </>
+          ) : (
+            <div style={{ width: '100%', height: '100%', minHeight: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', color: '#999', fontSize: '0.85rem' }}>
+              {product.title}
+            </div>
+          )}
         </Link>
 
         {/* Hover Quick Actions Bar */}

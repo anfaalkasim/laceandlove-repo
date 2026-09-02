@@ -37,11 +37,19 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
       {productOptions.map((option) => {
         if (option.optionValues.length === 1) return null;
 
+        const isColorOption = option.name.toLowerCase() === 'color' || option.name.toLowerCase() === 'colour';
+        const selectedValue = option.optionValues.find((v) => v.selected);
+
         return (
           <div className="product-options" key={option.name} style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <h5 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+              <h5 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {option.name}
+                {isColorOption && selectedValue && (
+                  <span style={{ fontWeight: 500, color: 'var(--color-accent)', marginLeft: '8px', textTransform: 'capitalize' }}>
+                    : {selectedValue.name}
+                  </span>
+                )}
               </h5>
               {option.name.toLowerCase() === 'size' && onOpenSizeGuide && (
                 <button
@@ -54,7 +62,7 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
               )}
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: isColorOption ? '10px' : '8px', alignItems: 'center' }}>
               {option.optionValues.map((value) => {
                 const {
                   name,
@@ -63,8 +71,58 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
                   selected,
                   exists,
                   isDifferentProduct,
+                  swatch,
                 } = value;
 
+                if (isColorOption) {
+                  const swatchHex = getColorHex(name, swatch);
+
+                  if (isDifferentProduct) {
+                    return (
+                      <Link
+                        className={`product-color-swatch ${selected ? 'selected' : ''}`}
+                        key={option.name + name}
+                        prefetch="intent"
+                        preventScrollReset
+                        replace
+                        to={`/products/${handle}?${variantUriQuery}`}
+                        title={name}
+                        aria-label={`Select ${name}`}
+                      >
+                        <span
+                          className="swatch-circle"
+                          style={{ backgroundColor: swatchHex }}
+                        />
+                      </Link>
+                    );
+                  } else {
+                    return (
+                      <button
+                        type="button"
+                        className={`product-color-swatch ${selected ? 'selected' : ''}`}
+                        key={option.name + name}
+                        disabled={exists === false}
+                        title={name}
+                        aria-label={`Select ${name}`}
+                        onClick={() => {
+                          if (!selected) {
+                            void navigate(`?${variantUriQuery}`, {
+                              replace: true,
+                              preventScrollReset: true,
+                            });
+                          }
+                        }}
+                      >
+                        <span
+                          className="swatch-circle"
+                          style={{ backgroundColor: swatchHex }}
+                        />
+                      </button>
+                    );
+                  }
+                }
+
+                // Non-color options (Size, Cup size, etc.)
                 if (isDifferentProduct) {
                   return (
                     <Link
@@ -84,7 +142,7 @@ export function ProductForm({productOptions, selectedVariant, onOpenSizeGuide, p
                       type="button"
                       className={`glamor-size-chip ${selected ? 'selected' : ''}`}
                       key={option.name + name}
-                      disabled={!exists}
+                      disabled={exists === false}
                       onClick={() => {
                         if (!selected) {
                           void navigate(`?${variantUriQuery}`, {
@@ -191,6 +249,58 @@ function WhatsAppIcon() {
       <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.97C16.579 1.966 14.11 1.94 12.007 1.94c-5.437 0-9.863 4.373-9.867 9.8.001 2.128.561 4.204 1.63 6.024L2.66 21.365l3.987-1.457zm11.234-7.234c-.302-.152-1.791-.883-2.073-.984-.282-.102-.489-.153-.69.152-.202.305-.783.984-.961 1.187-.178.203-.356.229-.658.077-1.282-.64-2.122-1.08-2.964-2.524-.222-.38-.222-.656-.071-.806.136-.135.302-.354.453-.531.152-.177.202-.303.303-.505.101-.202.05-.38-.025-.531-.076-.152-.69-1.662-.947-2.278-.25-.601-.524-.52-.719-.53-.186-.01-.399-.011-.612-.011-.213 0-.558.08-.85.399-.292.318-1.116 1.092-1.116 2.662 0 1.57 1.144 3.088 1.303 3.3.158.213 2.253 3.441 5.459 4.824.762.329 1.357.525 1.821.673.765.243 1.462.209 2.011.127.613-.092 1.791-.733 2.043-1.442.252-.709.252-1.316.177-1.442-.075-.127-.282-.203-.585-.355z" />
     </svg>
   );
+}
+
+const COLOR_MAP = {
+  black: '#121212',
+  'black silk': '#121212',
+  white: '#ffffff',
+  beige: '#d9b99b',
+  nude: '#e8cbb5',
+  blue: '#2c75d3',
+  navy: '#0b192c',
+  red: '#d32f2f',
+  green: '#2d5a27',
+  pink: '#e62a65',
+  'rose pink': '#ffb3c6',
+  'dusty rose': '#d8a7b1',
+  'cream nude': '#f5e8d3',
+  cream: '#fffdd0',
+  ivory: '#fffff0',
+  gray: '#808080',
+  grey: '#808080',
+  purple: '#6b46c1',
+  gold: '#d4af37',
+  silver: '#c0c0c0',
+  brown: '#8b4513',
+  yellow: '#f4d03f',
+  orange: '#e67e22',
+  maroon: '#800000',
+  burgundy: '#800020',
+  teal: '#008080',
+  coral: '#ff7f50',
+  lavender: '#e6e6fa',
+  lilac: '#c8a2c8',
+  mint: '#98ff98',
+  olive: '#808000',
+  rust: '#b7410e',
+  sand: '#c2b280',
+  tan: '#d2b48c',
+  taupe: '#483c32',
+  champagne: '#f7e7ce',
+  peach: '#ffe5b4',
+};
+
+function getColorHex(name, swatch) {
+  if (swatch?.color) return swatch.color;
+  const normalized = (name || '').toLowerCase().trim();
+  if (COLOR_MAP[normalized]) return COLOR_MAP[normalized];
+  for (const [key, hex] of Object.entries(COLOR_MAP)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return hex;
+    }
+  }
+  return '#cccccc';
 }
 
 /** @typedef {import('@shopify/hydrogen').MappedProductOptions} MappedProductOptions */

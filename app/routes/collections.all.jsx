@@ -543,6 +543,26 @@ const ALL_PRODUCTS_QUERY = `#graphql
               name
               value
             }
+            image {
+              url
+              altText
+              width
+              height
+            }
+            gallery_images: metafield(namespace: "custom", key: "gallery_images") {
+              references(first: 5) {
+                nodes {
+                  ... on MediaImage {
+                    image {
+                      url
+                      altText
+                      width
+                      height
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
